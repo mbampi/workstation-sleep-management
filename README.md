@@ -35,13 +35,13 @@ Ele será protegido por sessão crítica.
 ### Compilar
 
 ```
-g++ source/main.cpp -o sleep_manager
+g++ source/main.cpp -o sleep_manager -lpthread
 ```
 
 ### Participante
 Iniciar:
 ```
-./sleep_server
+make participant
 ```
 
 Sair do servico: 
@@ -52,7 +52,7 @@ EXIT
 ### Manager
 Iniciar
 ```
-./sleep_server manager
+make manager
 ```
 
 Acordar outra maquina: (somente o manager consegue)

@@ -1,9 +1,9 @@
 
 
-run:
-	g++ source/main.cpp -o sleep_manager
+participant:
+	g++ source/main.cpp -o sleep_manager -lpthread
 	./sleep_manager
 
-run_manager:
-	g++ source/main.cpp -o sleep_manager
+manager:
+	g++ source/main.cpp -o sleep_manager -lpthread
 	./sleep_manager manager
