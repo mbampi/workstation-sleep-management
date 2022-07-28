@@ -11,6 +11,9 @@
 
 using namespace std;
 
+#define PARTICIPANT_PORT 4001
+#define MANAGER_PORT 4000
+
 map<string, participant> participants_map; // hostname -> participant
 
 int startParticipant();
@@ -54,7 +57,7 @@ int startParticipant()
     int n;
     udp_comm *server = new udp_comm();
 
-    n = initServer(*server);
+    n = initServer(*server, PARTICIPANT_PORT);
     if (n == -1)
     {
         cout << "Error initializing participant" << endl;
@@ -67,7 +70,7 @@ int startParticipant()
         cout << server->buf << endl;
     }
 
-    n = send(*server, "Hello from participant");
+    n = send(*server, "Hello from participant", MANAGER_PORT);
     if (n == -1)
     {
         cout << "Error sending message" << endl;
@@ -110,14 +113,14 @@ int discoverySubservice()
     int n;
     udp_comm *server = new udp_comm();
 
-    n = initServer(*server);
+    n = initServer(*server, MANAGER_PORT);
     if (n == -1)
     {
         cout << "Error initializing manager" << endl;
         return -1;
     }
 
-    n = send(*server, "Hello from manager");
+    n = send(*server, "Hello from manager", PARTICIPANT_PORT);
     if (n == -1)
     {
         cout << "Error sending message" << endl;
