@@ -7,6 +7,8 @@
 #include <netdb.h>
 #include <stdio.h>
 
+using namespace std;
+
 #define PORT 4000
 
 int initServer();
