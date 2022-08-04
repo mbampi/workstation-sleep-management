@@ -55,31 +55,32 @@ int main(int argc, char *argv[])
 
 int startParticipant()
 {
-    int n;
-    udp_comm *server = new udp_comm();
+    // udp_comm *server = new udp_comm();
+    int n = receiveBroadcast();
+    cout << "Received broadcast " << n << endl;
 
-    n = initServer(*server, PARTICIPANT_PORT);
-    if (n == -1)
-    {
-        cout << "Error initializing participant" << endl;
-        return -1;
-    }
+    // n = initServer(*server, PARTICIPANT_PORT);
+    // if (n == -1)
+    // {
+    //     cout << "Error initializing participant" << endl;
+    //     return -1;
+    // }
 
-    while (true)
-    {
-        n = receive(*server);
-        if (n != -1)
-        {
-            cout << server->buf << endl;
-        }
+    // while (true)
+    // {
+    //     n = receive(*server);
+    //     if (n != -1)
+    //     {
+    //         cout << server->buf << endl;
+    //     }
 
-        n = send(*server, "Hello from participant", MANAGER_PORT);
-        if (n == -1)
-        {
-            cout << "Error sending message" << endl;
-            return -1;
-        }
-    }
+    //     n = send(*server, "Hello from participant", MANAGER_PORT);
+    //     if (n == -1)
+    //     {
+    //         cout << "Error sending message" << endl;
+    //         return -1;
+    //     }
+    // }
 
     cout << "ending participant" << endl;
 

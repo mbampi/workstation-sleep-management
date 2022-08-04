@@ -7,8 +7,6 @@
 
 using namespace std;
 
-// Participant
-
 enum status
 {
     awake = 0,
