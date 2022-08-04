@@ -2,6 +2,11 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <thread>
 
 using namespace std;
 
@@ -66,6 +71,43 @@ int send(udp_comm &server, const char *message, int port)
     else
         cout << "Message sent with " << n << " chars." << endl;
     return n;
+}
+
+// broadcast UDP message to all local network on port 4002
+int broadcastMessage(string message)
+{
+    sockaddr_in si_me, si_other;
+    int port = 4001;
+    int broadcast = 1;
+
+    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (s == -1)
+    {
+        printf("ERROR opening socket");
+        return -1;
+    }
+    cout << "usage hostname port " << port << endl;
+    setsockopt(s, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof broadcast);
+
+    memset(&si_me, 0, sizeof(si_me));
+    si_me.sin_family = AF_INET;
+    si_me.sin_port = htons(port);
+    si_me.sin_addr.s_addr = INADDR_ANY;
+
+    cout << "binding socket" << endl;
+    bind(s, (sockaddr *)&si_me, sizeof(sockaddr));
+
+    while (true)
+    {
+        printf("Send message to broadcast\n");
+        char buf[1000];
+        strcpy(buf, "testing123");
+        unsigned slen = sizeof(sockaddr);
+        send(s, buf, sizeof(buf) - 1, 0);
+        // recvfrom(s, buf, sizeof(buf) - 1, 0, (sockaddr *)&si_other, &slen);
+        // printf("recv: %s\n", buf);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
 }
 
 int receive(udp_comm &server)

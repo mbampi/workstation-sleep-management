@@ -2,12 +2,13 @@
 #include <stdio.h>
 #include <iostream>
 #include <iomanip> // to use setw
-#include "datatypes.h"
-#include <map> // to use map
+#include <map>     // to use map
 #include <thread>
-#include <netdb.h> // to use hostent, etc.
+#include <netdb.h> // to use hostent
 
 #include "udp_comm.cpp"
+#include "participant.cpp"
+#include "packet.cpp"
 
 using namespace std;
 
@@ -64,17 +65,20 @@ int startParticipant()
         return -1;
     }
 
-    n = receive(*server);
-    if (n != -1)
+    while (true)
     {
-        cout << server->buf << endl;
-    }
+        n = receive(*server);
+        if (n != -1)
+        {
+            cout << server->buf << endl;
+        }
 
-    n = send(*server, "Hello from participant", MANAGER_PORT);
-    if (n == -1)
-    {
-        cout << "Error sending message" << endl;
-        return -1;
+        n = send(*server, "Hello from participant", MANAGER_PORT);
+        if (n == -1)
+        {
+            cout << "Error sending message" << endl;
+            return -1;
+        }
     }
 
     cout << "ending participant" << endl;
@@ -91,17 +95,23 @@ int startManager()
     // discovery subservice
     thread discoveryThread(discoverySubservice);
 
+    // interface subservice
+    string userInput = "";
+    do
+    {
+        printParticipants();
+        populateFakeParticipants(); // testing
+        cout << "broadcasting" << endl;
+        broadcastMessage("Hello from manager");
+
+        cout << ">> ";
+        cin >> userInput;
+    } while (userInput != "EXIT");
+
     // TODO: monitoring subservice
     // TODO: management subservice
-    // TODO: interface subservice
-
-    cout << "Enter to stop" << endl;
-    cin.get();
 
     discoveryThread.join();
-
-    populateFakeParticipants();
-    printParticipants();
 
     cout << ("Manager stopped") << endl;
     return 0;
@@ -120,29 +130,32 @@ int discoverySubservice()
         return -1;
     }
 
-    n = send(*server, "Hello from manager", PARTICIPANT_PORT);
-    if (n == -1)
+    // n = send(*server, "Hello from manager", PARTICIPANT_PORT);
+    // if (n == -1)
+    // {
+    //     cout << "Error sending message" << endl;
+    //     return -1;
+    // }
+    while (true)
     {
-        cout << "Error sending message" << endl;
-        return -1;
+        // keeps listening to participants
+        n = receive(*server);
+        if (n != -1)
+            cout << server->buf << endl;
     }
 
-    n = receive(*server);
-    if (n != -1)
-        cout << server->buf << endl;
-
-    cout << "ending manager" << endl;
+    cout << "ending discovery" << endl;
 
     return 0;
 }
 
 // -----------------------------------------------
-//                      UTILITIES
+//                  UTILITIES
 // -----------------------------------------------
 
 void printParticipants()
 {
-    cout << setw(15) << "PARTICIPANTS" << endl;
+    cout << setw(15) << "\nPARTICIPANTS" << endl;
     cout << left << setw(12)
          << "Hostname"
          << left << setw(12)

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cstdlib>
 
 using namespace std;
 
@@ -22,30 +23,24 @@ typedef struct __packet
     const char *_payload; // Dados da mensagem
 } packet;
 
-// Participant
-
-enum status
+// encode packet to char array
+char *encode_packet(packet *p)
 {
-    awake = 0,
-    asleep = 1
-};
-
-string StatusToString(status s)
-{
-    switch (s)
-    {
-    case awake:
-        return "awake";
-    case asleep:
-        return "asleep";
-    default:
-        return "unknown";
-    }
+    char *buffer = (char *)malloc(sizeof(packet));
+    memcpy(buffer, p, sizeof(packet));
+    return buffer;
 }
 
-typedef struct __participant
+// decode char array to packet
+packet *decode_packet(char *buffer)
 {
-    string ip;
-    string mac;
-    status status;
-} participant;
+    packet *p = (packet *)malloc(sizeof(packet));
+    memcpy(p, buffer, sizeof(packet));
+    return p;
+}
+
+// get packet type from char array
+packet_type get_packet_type(char *buffer)
+{
+    return (packet_type)buffer[0];
+}
