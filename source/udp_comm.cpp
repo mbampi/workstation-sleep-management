@@ -20,7 +20,7 @@ int sendPacket(char *ip, int port, packet *p)
     int sockfd, n;
     struct sockaddr_in serv_addr, cli_addr;
 
-    auto server = gethostbyname(ip);
+    struct hostent *server = gethostbyname(ip);
     if (server == NULL)
         fprintf(stderr, "ERROR, no such host\n");
 
@@ -144,10 +144,10 @@ int receiveBroadcast(int on_port)
                  << " | length=" << p->length
                  << " | payload:" << p->_payload << endl;
 
-            if (p->type == packet_type::DISCOVERY)
+            if (p->type == DISCOVERY)
             {
                 cout << "DEBUG: received DISCOVERY packet." << endl;
-                p->type = packet_type::DISCOVERY_ACK;
+                p->type = DISCOVERY_ACK;
                 char *ip = inet_ntoa(si_other.sin_addr);
                 sleep(1);
                 int sent_bytes = sendPacket(ip, MANAGER_PORT, p);

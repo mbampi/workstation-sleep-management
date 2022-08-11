@@ -106,7 +106,7 @@ int discoverySubservice()
         cout << endl;
 
         packet *p = new packet();
-        p->type = packet_type::DISCOVERY;
+        p->type = DISCOVERY;
         p->_payload = "discovery_service_msg";
         p->length = sizeof("discovery_service_msg");
         p->seqn = seq_num;
@@ -121,13 +121,13 @@ int discoverySubservice()
 
         // receive response
         cout << "Waiting for response for msg " << seq_num << " on port " << MANAGER_PORT << endl;
-        auto resP = receivePacket(MANAGER_PORT);
-        if (resP == NULL)
+        packet *response = receivePacket(MANAGER_PORT);
+        if (response == NULL)
         {
             cout << "Error receiving packet" << endl;
             return -1;
         }
-        cout << "DEBUG: packet response type=" << resP->type << " | seqn: " << resP->seqn << " | length: " << resP->length << " | payload:" << resP->_payload << endl;
+        cout << "DEçBUG: packet response type=" << response->type << " | seqn: " << response->seqn << " | length: " << response->length << " | payload:" << response->_payload << endl;
 
         seq_num++;
         sleep(5);   // wait for 5 seconds
