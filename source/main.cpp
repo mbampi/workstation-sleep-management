@@ -55,32 +55,39 @@ int main(int argc, char *argv[])
 
 int startParticipant()
 {
-    // udp_comm *server = new udp_comm();
-    int n = receiveBroadcast();
-    cout << "Received broadcast " << n << endl;
+    bool broadcast = true;
+    if (broadcast)
+    {
+        int n = receiveBroadcast(PARTICIPANT_PORT);
+        cout << "Received broadcast " << n << endl;
+    }
+    else
+    {
+        udp_comm *server = new udp_comm();
 
-    // n = initServer(*server, PARTICIPANT_PORT);
-    // if (n == -1)
-    // {
-    //     cout << "Error initializing participant" << endl;
-    //     return -1;
-    // }
+        int n = initServer(*server, PARTICIPANT_PORT);
+        if (n == -1)
+        {
+            cout << "Error initializing participant" << endl;
+            return -1;
+        }
 
-    // while (true)
-    // {
-    //     n = receive(*server);
-    //     if (n != -1)
-    //     {
-    //         cout << server->buf << endl;
-    //     }
+        while (true)
+        {
+            n = receive(*server);
+            if (n != -1)
+            {
+                cout << server->buf << endl;
+            }
 
-    //     n = send(*server, "Hello from participant", MANAGER_PORT);
-    //     if (n == -1)
-    //     {
-    //         cout << "Error sending message" << endl;
-    //         return -1;
-    //     }
-    // }
+            n = send(*server, "Hello from participant", MANAGER_PORT);
+            if (n == -1)
+            {
+                cout << "Error sending message" << endl;
+                return -1;
+            }
+        }
+    }
 
     cout << "ending participant" << endl;
 
@@ -93,17 +100,32 @@ int startParticipant()
 
 int startManager()
 {
+    bool is_broadcast = true;
     // discovery subservice
-    thread discoveryThread(discoverySubservice);
+    // thread discoveryThread(discoverySubservice);
 
     // interface subservice
-    string userInput = "";
+    string userInput = "msg 1";
     do
     {
         printParticipants();
         populateFakeParticipants(); // testing
-        cout << "broadcasting" << endl;
-        broadcastMessage("Hello from manager");
+        if (is_broadcast)
+        {
+            cout << "broadcasting to port " << PARTICIPANT_PORT << endl;
+            broadcastMessage(userInput, PARTICIPANT_PORT);
+        }
+        else
+        {
+            udp_comm *server = new udp_comm();
+            int n = initServer(*server, MANAGER_PORT);
+            if (n == -1)
+            {
+                cout << "Error initializing participant" << endl;
+                return -1;
+            }
+            send(*server, "Hello from manager", PARTICIPANT_PORT);
+        }
 
         cout << ">> ";
         cin >> userInput;
@@ -112,7 +134,7 @@ int startManager()
     // TODO: monitoring subservice
     // TODO: management subservice
 
-    discoveryThread.join();
+    // discoveryThread.join();
 
     cout << ("Manager stopped") << endl;
     return 0;
@@ -124,12 +146,12 @@ int discoverySubservice()
     int n;
     udp_comm *server = new udp_comm();
 
-    n = initServer(*server, MANAGER_PORT);
-    if (n == -1)
-    {
-        cout << "Error initializing manager" << endl;
-        return -1;
-    }
+    // n = initServer(*server, MANAGER_PORT);
+    // if (n == -1)
+    // {
+    //     cout << "Error initializing manager" << endl;
+    //     return -1;
+    // }
 
     // n = send(*server, "Hello from manager", PARTICIPANT_PORT);
     // if (n == -1)

@@ -16,6 +16,7 @@ typedef struct
     struct sockaddr_in serv_addr;
     socklen_t clilen;
     char buf[256];
+    int port;
 } udp_comm;
 
 int initServer(udp_comm &server);
@@ -24,6 +25,7 @@ int receive(udp_comm &server);
 
 int initServer(udp_comm &server, int port)
 {
+    server.port = port;
     if ((server.sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
     {
         printf("ERROR opening socket");
@@ -31,7 +33,7 @@ int initServer(udp_comm &server, int port)
     }
 
     server.serv_addr.sin_family = AF_INET;
-    server.serv_addr.sin_port = htons(port);
+    server.serv_addr.sin_port = htons(server.port);
     server.serv_addr.sin_addr.s_addr = INADDR_ANY;
     bzero(&(server.serv_addr.sin_zero), 8);
 
@@ -44,7 +46,7 @@ int initServer(udp_comm &server, int port)
     return 0;
 }
 
-int send(udp_comm &server, const char *message, int port)
+int send(udp_comm &server, const char *message, int target_port)
 {
     const char *ip = "localhost"; // TODO: broadcast
     struct hostent *host_server = gethostbyname(ip);
@@ -56,7 +58,7 @@ int send(udp_comm &server, const char *message, int port)
 
     struct sockaddr_in serv_addr;
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(port);
+    serv_addr.sin_port = htons(target_port);
     serv_addr.sin_addr = *((struct in_addr *)host_server->h_addr);
     bzero(&(serv_addr.sin_zero), 8);
 
@@ -73,41 +75,23 @@ int send(udp_comm &server, const char *message, int port)
     return n;
 }
 
-// broadcast UDP message to all local network on port 4002
-int broadcastMessage(string message)
+// broadcast UDP message to all local network on port 4001
+int broadcastMessage(string msg, int port)
 {
-    sockaddr_in si_me, si_other;
-    int port = 4001;
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+
     int broadcast = 1;
+    int errors = setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(int));
 
-    int s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (s == -1)
-    {
-        printf("ERROR opening socket");
-        return -1;
-    }
-    cout << "usage hostname port " << port << endl;
-    setsockopt(s, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof broadcast);
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    memset(addr.sin_zero, '\n', sizeof(addr.sin_zero));
 
-    memset(&si_me, 0, sizeof(si_me));
-    si_me.sin_family = AF_INET;
-    si_me.sin_port = htons(port);
-    si_me.sin_addr.s_addr = INADDR_ANY;
-
-    cout << "binding socket" << endl;
-    bind(s, (sockaddr *)&si_me, sizeof(sockaddr));
-
-    while (true)
-    {
-        printf("Send message to broadcast\n");
-        char buf[1000];
-        strcpy(buf, "testing123");
-        unsigned slen = sizeof(sockaddr);
-        send(s, buf, sizeof(buf) - 1, 0);
-        // recvfrom(s, buf, sizeof(buf) - 1, 0, (sockaddr *)&si_other, &slen);
-        // printf("recv: %s\n", buf);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
+    msg.c_str();
+    int len = strlen(msg.c_str());
+    int bytes_sent = sendto(fd, msg.c_str(), len, 0, (struct sockaddr *)&addr, sizeof(addr));
 }
 
 int receive(udp_comm &server)
@@ -120,10 +104,9 @@ int receive(udp_comm &server)
     return n;
 }
 
-int receiveBroadcast()
+int receiveBroadcast(int on_port)
 {
     sockaddr_in si_me, si_other;
-    int port = 4001;
     int broadcast = 1;
     int s;
     assert((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1);
@@ -132,7 +115,7 @@ int receiveBroadcast()
 
     memset(&si_me, 0, sizeof(si_me));
     si_me.sin_family = AF_INET;
-    si_me.sin_port = htons(port);
+    si_me.sin_port = htons(on_port);
     si_me.sin_addr.s_addr = INADDR_ANY;
 
     assert(::bind(s, (sockaddr *)&si_me, sizeof(sockaddr)) != -1);
@@ -141,6 +124,7 @@ int receiveBroadcast()
     {
         char buf[10000];
         unsigned slen = sizeof(sockaddr);
+        cout << "listening for broadcast on port " << on_port << endl;
         recvfrom(s, buf, sizeof(buf) - 1, 0, (sockaddr *)&si_other, &slen);
 
         printf("recv: %s\n", buf);
