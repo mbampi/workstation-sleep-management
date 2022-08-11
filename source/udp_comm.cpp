@@ -10,71 +10,6 @@
 
 using namespace std;
 
-typedef struct
-{
-    int sockfd;
-    struct sockaddr_in serv_addr;
-    socklen_t clilen;
-    char buf[256];
-    int port;
-} udp_comm;
-
-int initServer(udp_comm &server);
-int send(udp_comm &server, const char *message);
-int receive(udp_comm &server);
-
-int initServer(udp_comm &server, int port)
-{
-    server.port = port;
-    if ((server.sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
-    {
-        printf("ERROR opening socket");
-        return -1;
-    }
-
-    server.serv_addr.sin_family = AF_INET;
-    server.serv_addr.sin_port = htons(server.port);
-    server.serv_addr.sin_addr.s_addr = INADDR_ANY;
-    bzero(&(server.serv_addr.sin_zero), 8);
-
-    if (bind(server.sockfd, (struct sockaddr *)&server.serv_addr, sizeof(struct sockaddr)) < 0)
-    {
-        printf("ERROR on binding");
-        return -1;
-    }
-
-    return 0;
-}
-
-int send(udp_comm &server, const char *message, int target_port)
-{
-    const char *ip = "localhost"; // TODO: broadcast
-    struct hostent *host_server = gethostbyname(ip);
-    if (host_server == NULL)
-    {
-        fprintf(stderr, "ERROR, no such host\n");
-        exit(0);
-    }
-
-    struct sockaddr_in serv_addr;
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(target_port);
-    serv_addr.sin_addr = *((struct in_addr *)host_server->h_addr);
-    bzero(&(serv_addr.sin_zero), 8);
-
-    char buffer[256];
-    bzero(buffer, 256);
-    strcpy(buffer, message);
-    cout << "Sending message" << endl;
-
-    int n = sendto(server.sockfd, message, strlen(message), 0, (struct sockaddr *)&serv_addr, sizeof(struct sockaddr));
-    if (n < 0)
-        printf("ERROR on send");
-    else
-        cout << "Message sent with " << n << " chars." << endl;
-    return n;
-}
-
 // broadcast UDP message to all local network on port 4001
 int broadcastMessage(string msg, int port)
 {
@@ -92,16 +27,6 @@ int broadcastMessage(string msg, int port)
     msg.c_str();
     int len = strlen(msg.c_str());
     int bytes_sent = sendto(fd, msg.c_str(), len, 0, (struct sockaddr *)&addr, sizeof(addr));
-}
-
-int receive(udp_comm &server)
-{
-    struct sockaddr_in cli_addr;
-    int n = recvfrom(server.sockfd, server.buf, 256, 0, (struct sockaddr *)&cli_addr, &server.clilen);
-    if (n < 0)
-        printf("ERROR on recvfrom");
-    cout << "Message received: '" << server.buf << "' from " << cli_addr.sin_addr.s_addr << endl;
-    return n;
 }
 
 int receiveBroadcast(int on_port)
@@ -127,6 +52,6 @@ int receiveBroadcast(int on_port)
         cout << "listening for broadcast on port " << on_port << endl;
         recvfrom(s, buf, sizeof(buf) - 1, 0, (sockaddr *)&si_other, &slen);
 
-        printf("recv: %s\n", buf);
+        printf("DEBUG: rcvd: %s\n", buf);
     }
 }
