@@ -6,9 +6,9 @@
 #include <thread>
 #include <netdb.h> // to use hostent
 
+#include "packet.cpp"
 #include "udp_comm.cpp"
 #include "participant.cpp"
-#include "packet.cpp"
 
 #include <cstdlib>
 #include <unistd.h>
@@ -100,10 +100,30 @@ int startManager()
 int discoverySubservice()
 {
     cout << "Started DiscoverySubservice" << endl;
+    uint16_t seq_num = 1;
     do
     {
-        cout << "DEBUG: broadcasting to port " << PARTICIPANT_PORT << endl;
-        broadcastMessage("discovery_service_msg", PARTICIPANT_PORT);
+        bool string_msg = false;
+        if (string_msg)
+        {
+            broadcastMessage("discovery_service_msg", PARTICIPANT_PORT);
+        }
+        else
+        {
+            packet *p = new packet();
+            p->type = packet_type::DISCOVERY;
+            p->_payload = "discovery_service_msg";
+            p->length = sizeof("discovery_service_msg");
+            p->seqn = seq_num;
+            seq_num++;
+            int sent_bytes = broadcastPacket(p, PARTICIPANT_PORT);
+            if (sent_bytes < 0)
+            {
+                cout << "Error sending broadcast" << endl;
+                return -1;
+            }
+            cout << "DEBUG: broadcasted msg " << seq_num << " to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
+        }
         sleep(2);   // wait for 2 seconds
     } while (true); // TODO: add condition to stop
 

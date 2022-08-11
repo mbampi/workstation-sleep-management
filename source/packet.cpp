@@ -10,8 +10,8 @@ using namespace std;
 
 enum packet_type
 {
-    sleep_service_discovery = 0,
-    sleep_status_request = 1
+    DISCOVERY = 0,
+    REQUEST = 1
 };
 
 typedef struct __packet
@@ -23,24 +23,47 @@ typedef struct __packet
     const char *_payload; // Dados da mensagem
 } packet;
 
+int encode_packet(packet *p, char *buffer);
+packet *decode_packet(char *buffer);
+
 // encode packet to char array
-char *encode_packet(packet *p)
+int encode_packet(packet *p, char *buffer)
 {
-    char *buffer = (char *)malloc(sizeof(packet));
-    memcpy(buffer, p, sizeof(packet));
-    return buffer;
+    p->length = strlen(p->_payload);
+    int len = sizeof(p->type) + sizeof(p->seqn) + sizeof(p->length) + sizeof(p->timestamp) + p->length;
+    buffer = (char *)malloc(len);
+    cout << "buffer len: " << len << endl;
+    memcpy(buffer, p, len);
+    return len;
 }
 
 // decode char array to packet
-packet *decode_packet(char *buffer)
+packet *decode_packet(char *buffer, int len)
 {
     packet *p = (packet *)malloc(sizeof(packet));
-    memcpy(p, buffer, sizeof(packet));
+    memcpy(p, buffer, len);
     return p;
 }
 
-// get packet type from char array
-packet_type get_packet_type(char *buffer)
+// encode packet to char array
+string encode_packet_str(packet *p)
 {
-    return (packet_type)buffer[0];
+    return to_string(p->type) + "|" + to_string(p->seqn) + "|" + to_string(p->length) + "|" + to_string(p->timestamp) + "|" + p->_payload;
+}
+
+// split string by |
+packet *decode_packet_str(string buffer)
+{
+    // split string by |
+    packet *p = (packet *)malloc(sizeof(packet));
+    p->type = atoi(buffer.substr(0, buffer.find("|")).c_str());
+    buffer = buffer.substr(buffer.find("|") + 1);
+    p->seqn = atoi(buffer.substr(0, buffer.find("|")).c_str());
+    buffer = buffer.substr(buffer.find("|") + 1);
+    p->length = atoi(buffer.substr(0, buffer.find("|")).c_str());
+    buffer = buffer.substr(buffer.find("|") + 1);
+    p->timestamp = atoi(buffer.substr(0, buffer.find("|")).c_str());
+    buffer = buffer.substr(buffer.find("|") + 1);
+    p->_payload = buffer.c_str();
+    return p;
 }
