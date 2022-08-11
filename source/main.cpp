@@ -77,7 +77,7 @@ int startManager()
     populateFakeParticipants(); // DEBUG
 
     // interface subservice
-    string userInput = "msg 1";
+    string userInput = "";
     do
     {
         printParticipants();
@@ -100,31 +100,37 @@ int startManager()
 int discoverySubservice()
 {
     cout << "Started DiscoverySubservice" << endl;
-    uint16_t seq_num = 1;
+    uint16_t seq_num = 0;
     do
     {
-        bool string_msg = false;
-        if (string_msg)
+        cout << endl;
+
+        packet *p = new packet();
+        p->type = packet_type::DISCOVERY;
+        p->_payload = "discovery_service_msg";
+        p->length = sizeof("discovery_service_msg");
+        p->seqn = seq_num;
+
+        int sent_bytes = broadcastPacket(p, PARTICIPANT_PORT);
+        if (sent_bytes < 0)
         {
-            broadcastMessage("discovery_service_msg", PARTICIPANT_PORT);
+            cout << "Error sending broadcast" << endl;
+            return -1;
         }
-        else
+        cout << "DEBUG: broadcasted msg " << seq_num << " to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
+
+        // receive response
+        cout << "Waiting for response for msg " << seq_num << " on port " << MANAGER_PORT << endl;
+        auto resP = receivePacket(MANAGER_PORT);
+        if (resP == NULL)
         {
-            packet *p = new packet();
-            p->type = packet_type::DISCOVERY;
-            p->_payload = "discovery_service_msg";
-            p->length = sizeof("discovery_service_msg");
-            p->seqn = seq_num;
-            seq_num++;
-            int sent_bytes = broadcastPacket(p, PARTICIPANT_PORT);
-            if (sent_bytes < 0)
-            {
-                cout << "Error sending broadcast" << endl;
-                return -1;
-            }
-            cout << "DEBUG: broadcasted msg " << seq_num << " to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
+            cout << "Error receiving packet" << endl;
+            return -1;
         }
-        sleep(2);   // wait for 2 seconds
+        cout << "DEBUG: packet response type=" << resP->type << " | seqn: " << resP->seqn << " | length: " << resP->length << " | payload:" << resP->_payload << endl;
+
+        seq_num++;
+        sleep(5);   // wait for 5 seconds
     } while (true); // TODO: add condition to stop
 
     cout << "ending discovery" << endl;

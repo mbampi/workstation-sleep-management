@@ -1,5 +1,4 @@
 
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -7,8 +6,68 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <thread>
+#include <netdb.h> // to use hostent
+#include <unistd.h>
+#include <string.h>
 
 using namespace std;
+
+#define PARTICIPANT_PORT 4001
+#define MANAGER_PORT 4000
+
+int sendPacket(char *ip, int port, packet *p)
+{
+    int sockfd, n;
+    struct sockaddr_in serv_addr, cli_addr;
+
+    auto server = gethostbyname(ip);
+    if (server == NULL)
+        fprintf(stderr, "ERROR, no such host\n");
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+        printf("ERROR opening socket");
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(port);
+    serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
+    bzero(&(serv_addr.sin_zero), 8);
+
+    string encoded_msg = encode_packet(p);
+    int len = strlen(encoded_msg.c_str());
+    cout << "sendPacket=" << encoded_msg << " with len=" << len << endl;
+    n = sendto(sockfd, encoded_msg.c_str(), len, 0, (const struct sockaddr *)&serv_addr, sizeof(struct sockaddr_in));
+    if (n < 0)
+        printf("ERROR sendto");
+    return n;
+}
+
+packet *receivePacket(int on_port)
+{
+    int sockfd, n;
+    socklen_t clilen;
+    struct sockaddr_in serv_addr, cli_addr;
+    char buf[256];
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+        printf("ERROR opening socket");
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(on_port);
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    bzero(&(serv_addr.sin_zero), 8);
+
+    if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(struct sockaddr)) < 0)
+        printf("ERROR on binding");
+
+    clilen = sizeof(struct sockaddr_in);
+
+    n = recvfrom(sockfd, buf, 256, 0, (struct sockaddr *)&cli_addr, &clilen);
+    if (n < 0)
+        printf("ERROR on recvfrom");
+
+    packet *p = decode_packet(buf);
+    return p;
+}
 
 // broadcast UDP message to all local network on port 4001
 int broadcastMessage(string msg, int port)
@@ -42,8 +101,9 @@ int broadcastPacket(packet *msg, int port)
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     memset(addr.sin_zero, '\n', sizeof(addr.sin_zero));
 
-    string encoded_msg = encode_packet_str(msg);
+    string encoded_msg = encode_packet(msg);
     int len = strlen(encoded_msg.c_str());
+    cout << "broadcastPacket=" << encoded_msg << " with len=" << len << endl;
     int bytes_sent = sendto(fd, encoded_msg.c_str(), len, 0, (struct sockaddr *)&addr, sizeof(addr));
 
     return bytes_sent;
@@ -67,25 +127,33 @@ int receiveBroadcast(int on_port)
 
     while (true)
     {
+        cout << endl;
         char buf[10000];
         unsigned slen = sizeof(sockaddr);
         cout << "listening for broadcast on port " << on_port << endl;
 
         int nrecv = recvfrom(s, buf, sizeof(buf), 0, (sockaddr *)&si_other, &slen);
-        cout << "DEBUG: rcvd packet with len=" << nrecv << endl;
+        cout << "DEBUG: rcvd packet " << buf << " with len=" << nrecv << endl;
 
         bool string_msg = false;
-        if (string_msg)
+        if (!string_msg)
         {
-            cout << "DEBUG msg received: " << buf << endl;
-        }
-        else
-        {
-            packet *p = decode_packet_str(string(buf));
-            cout << "DEBUG: packet type: " << p->type << endl;
-            cout << "DEBUG: packet seqn: " << p->seqn << endl;
-            cout << "DEBUG: packet length: " << p->length << endl;
-            cout << "DEBUG: packet payload:" << p->_payload << endl;
+            packet *p = decode_packet(buf);
+            cout << "DEBUG: packet type=" << p->type
+                 << " | seqn=" << p->seqn
+                 << " | length=" << p->length
+                 << " | payload:" << p->_payload << endl;
+
+            if (p->type == packet_type::DISCOVERY)
+            {
+                cout << "DEBUG: received DISCOVERY packet." << endl;
+                p->type = packet_type::DISCOVERY_ACK;
+                char *ip = inet_ntoa(si_other.sin_addr);
+                sleep(1);
+                int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
+                cout << "DEBUG: sent DISCOVERY ACK with " << sent_bytes << " bytes"
+                     << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+            }
         }
     }
 }
