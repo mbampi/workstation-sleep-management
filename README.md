@@ -32,12 +32,6 @@ Ele será protegido por sessão crítica.
 
 ## Como executar
 
-### Compilar
-
-```
-g++ source/main.cpp -o sleep_manager -lpthread
-```
-
 ### Participante
 Iniciar:
 ```
