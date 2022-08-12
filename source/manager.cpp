@@ -13,6 +13,8 @@ int startManager()
 {
     thread discoveryThread(discoverySubservice);
 
+    thread messagesReceiverThread(messagesReceiver);
+
     populateFakeParticipants(); // DEBUG
 
     // interface subservice
@@ -31,6 +33,7 @@ int startManager()
     cout << ("Manager EXIT request from user") << endl;
 
     discoveryThread.join();
+    messagesReceiverThread.join();
 
     cout << ("Manager stopped") << endl;
     return 0;
@@ -45,9 +48,8 @@ int discoverySubservice()
         cout << endl;
 
         packet *p = new packet();
-        p->type = DISCOVERY;
+        p->type = DISCOVERY_REQ;
         p->_payload = "discovery_service_msg";
-        p->length = sizeof("discovery_service_msg");
         p->seqn = seq_num;
 
         int sent_bytes = broadcastPacket(p, PARTICIPANT_PORT);
@@ -58,8 +60,23 @@ int discoverySubservice()
         }
         cout << "DEBUG: broadcasted msg " << seq_num << " to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
 
+        seq_num++;
+        sleep(6);   // wait for 6 seconds
+    } while (true); // TODO: add condition to stop
+
+    cout << "ending discovery" << endl;
+    return 0;
+}
+
+int messagesReceiver()
+{
+    cout << "Started MessagesReceiver" << endl;
+    do
+    {
+        cout << endl;
+
         // receive response
-        cout << "Waiting for response for msg " << seq_num << " on port " << MANAGER_PORT << endl;
+        cout << "Waiting for message on port " << MANAGER_PORT << endl;
         packet *response = receivePacket(MANAGER_PORT);
         if (response == NULL)
         {
@@ -67,13 +84,7 @@ int discoverySubservice()
             return -1;
         }
         cout << "DEBUG: packet response type=" << response->type << " | seqn: " << response->seqn << " | length: " << response->length << " | payload:" << response->_payload << endl;
-
-        seq_num++;
-        sleep(5);   // wait for 5 seconds
-    } while (true); // TODO: add condition to stop
-
-    cout << "ending discovery" << endl;
-    return 0;
+    } while (true);
 }
 
 void printParticipants()

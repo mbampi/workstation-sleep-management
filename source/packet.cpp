@@ -10,7 +10,7 @@ using namespace std;
 // encode packet to string
 string encode_packet(packet *p)
 {
-    return to_string(p->type) + "|" + to_string(p->seqn) + "|" + to_string(p->length) + "|" + to_string(p->timestamp) + "|" + p->_payload;
+    return to_string(p->type) + "|" + to_string(p->seqn) + "|" + to_string(sizeof(p->_payload)) + "|" + to_string(p->timestamp) + "|" + p->_payload;
 }
 
 // decode packet from string

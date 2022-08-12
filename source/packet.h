@@ -9,8 +9,12 @@ using namespace std;
 
 enum packet_type
 {
-    DISCOVERY = 0,
-    DISCOVERY_ACK = 1,
+    DISCOVERY_REQ = 0,
+    DISCOVERY_RES = 1,
+
+    STATUS_REQ = 2,
+    STATUS_RES = 3,
+
 };
 
 typedef struct __packet

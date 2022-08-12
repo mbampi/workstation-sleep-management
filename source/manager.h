@@ -10,6 +10,7 @@
 int startManager();
 
 int discoverySubservice();
+int messagesReceiver();
 
 void printParticipants();
 

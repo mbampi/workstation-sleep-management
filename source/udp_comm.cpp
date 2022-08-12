@@ -143,14 +143,13 @@ int receiveBroadcast(int on_port)
                  << " | length=" << p->length
                  << " | payload:" << p->_payload << endl;
 
-            if (p->type == DISCOVERY)
+            if (p->type == DISCOVERY_REQ)
             {
-                cout << "DEBUG: received DISCOVERY packet." << endl;
-                p->type = DISCOVERY_ACK;
+                cout << "DEBUG: received DISCOVERY_REQ packet." << endl;
+                p->type = DISCOVERY_RES;
                 char *ip = inet_ntoa(si_other.sin_addr);
-                sleep(1);
                 int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
-                cout << "DEBUG: sent DISCOVERY ACK with " << sent_bytes << " bytes"
+                cout << "DEBUG: sent DISCOVERY_RES with " << sent_bytes << " bytes"
                      << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
             }
         }
