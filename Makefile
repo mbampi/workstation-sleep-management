@@ -1,11 +1,11 @@
 
 
 participant:
-	g++ source/main.cpp -o sleep_manager
+	g++ source/*.cpp -o sleep_manager
 	./sleep_manager
 
 manager:
-	g++ source/main.cpp -o sleep_manager
+	g++ source/*.cpp -o sleep_manager
 	./sleep_manager manager
 
 clean:

@@ -9,11 +9,10 @@
 #include <netdb.h> // to use hostent
 #include <unistd.h>
 #include <string.h>
+#include <iostream>
+#include "udp_comm.h"
 
 using namespace std;
-
-#define PARTICIPANT_PORT 4001
-#define MANAGER_PORT 4000
 
 int sendPacket(char *ip, int port, packet *p)
 {
@@ -127,7 +126,7 @@ int receiveBroadcast(int on_port)
 
     while (true)
     {
-        cout << endl;
+        std::cout << std::endl;
         char buf[10000];
         unsigned slen = sizeof(sockaddr);
         cout << "listening for broadcast on port " << on_port << endl;
