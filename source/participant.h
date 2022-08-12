@@ -1,5 +1,6 @@
 #ifndef PARTICIPANT_H
 #define PARTICIPANT_H
+
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,10 +21,12 @@ string StatusToString(status s);
 
 typedef struct __participant
 {
+    string hostname;
     string ip;
     string mac;
     status status;
 } participant;
 
 int startParticipant();
+
 #endif

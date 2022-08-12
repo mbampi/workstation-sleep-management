@@ -4,10 +4,9 @@
 #include <unistd.h>
 #include <thread>
 
-#include "manager.h"
 #include "participant.h"
-
-map<string, participant> participants_map; // hostname -> participant
+#include "manager.h"
+#include "mgmt_ss.h"
 
 int startManager()
 {
@@ -99,11 +98,11 @@ void printParticipants()
          << left << setw(10)
          << "Status"
          << endl;
-    for (const auto &[h, p] : participants_map)
+    for (const auto p : getParticipants())
     {
         cout
             << left << setw(12)
-            << h
+            << p.hostname
             << left << setw(12)
             << p.ip
             << left << setw(20)
@@ -120,17 +119,20 @@ void populateFakeParticipants()
     p1.ip = "1.1.1.1";
     p1.mac = "01:01:01:01:01:01";
     p1.status = awake;
-    participants_map["host1"] = p1;
+    p1.hostname = "host1";
+    addParticipant(p1);
 
     participant p2;
     p2.ip = "1.1.1.2";
     p2.mac = "02:02:02:02:02:02";
     p2.status = asleep;
-    participants_map["host2"] = p2;
+    p2.hostname = "host2";
+    addParticipant(p2);
 
     participant p3;
     p3.ip = "1.1.1.3";
     p3.mac = "03:03:03:03:03:03";
     p3.status = asleep;
-    participants_map["host3"] = p3;
+    p3.hostname = "host3";
+    addParticipant(p3);
 }
