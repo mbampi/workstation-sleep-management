@@ -10,7 +10,7 @@
 
 using namespace std;
 
-void addParticipant(participant p);
+void addParticipant(participant *p);
 void removeParticipant(string hostname);
 void changeParticipantStatus(string hostname, status s);
 vector<participant> getParticipants();

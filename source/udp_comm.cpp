@@ -10,7 +10,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <iostream>
+
 #include "udp_comm.h"
+#include "participant.h"
 
 using namespace std;
 
@@ -40,12 +42,13 @@ int sendPacket(char *ip, int port, packet *p)
     return n;
 }
 
-packet *receivePacket(int on_port)
+packet_res *receivePacket(int on_port)
 {
     int sockfd, n;
     socklen_t clilen;
     struct sockaddr_in serv_addr, cli_addr;
     char buf[256];
+    int true_int = 1;
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
         printf("ERROR opening socket");
@@ -54,6 +57,9 @@ packet *receivePacket(int on_port)
     serv_addr.sin_port = htons(on_port);
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     bzero(&(serv_addr.sin_zero), 8);
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &true_int, sizeof(true_int)) < 0)
+        printf("ERROR on setsockopt reuse port");
 
     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(struct sockaddr)) < 0)
         printf("ERROR on binding");
@@ -64,11 +70,15 @@ packet *receivePacket(int on_port)
     if (n < 0)
         printf("ERROR on recvfrom");
 
-    packet *p = decode_packet(buf);
+    cout << "receivePacket: " << buf << endl;
+
+    packet_res *p = decode_packet(buf, &cli_addr);
+
+    cout << "receivePacket: decoded packet type=" << p->type << " seqn=" << p->seqn << " length=" << p->length << " timestamp=" << p->timestamp << " payload=" << p->_payload << endl;
     return p;
 }
 
-// broadcast UDP message to all local network on port 4001
+// broadcast UDP message to all local network
 int broadcastMessage(string msg, int port)
 {
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -92,7 +102,10 @@ int broadcastPacket(packet *msg, int port)
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
 
     int broadcast = 1;
-    int errors = setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(int));
+    if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(int)) < 0)
+        printf("ERROR on setsockopt");
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &broadcast, sizeof(int)) < 0)
+        printf("ERROR on setsockopt");
 
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
@@ -129,27 +142,32 @@ int receiveBroadcast(int on_port)
         std::cout << std::endl;
         char buf[10000];
         unsigned slen = sizeof(sockaddr);
-        cout << "listening for broadcast on port " << on_port << endl;
+        cout << "receiveBroadcast: listening for broadcast on port " << on_port << endl;
 
         int nrecv = recvfrom(s, buf, sizeof(buf), 0, (sockaddr *)&si_other, &slen);
-        cout << "DEBUG: rcvd packet " << buf << " with len=" << nrecv << endl;
+        cout << "receiveBroadcastBUG: rcvd packet " << buf << " with len=" << nrecv << endl;
 
         bool string_msg = false;
         if (!string_msg)
         {
-            packet *p = decode_packet(buf);
-            cout << "DEBUG: packet type=" << p->type
-                 << " | seqn=" << p->seqn
-                 << " | length=" << p->length
-                 << " | payload:" << p->_payload << endl;
+            packet_res *rcvd_packet = decode_packet(buf, &si_other);
+            cout << "receiveBroadcast: packet type=" << rcvd_packet->type
+                 << " | seqn=" << rcvd_packet->seqn
+                 << " | length=" << rcvd_packet->length
+                 << " | payload:" << rcvd_packet->_payload << endl;
 
-            if (p->type == DISCOVERY_REQ)
+            if (rcvd_packet->type == DISCOVERY_REQ)
             {
-                cout << "DEBUG: received DISCOVERY_REQ packet." << endl;
+                cout << "receiveBroadcast: received DISCOVERY_REQ packet." << endl;
+
+                packet *p = new packet();
                 p->type = DISCOVERY_RES;
+                p->seqn = 0;
+                p->_payload = "notebook_1";
+
                 char *ip = inet_ntoa(si_other.sin_addr);
                 int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
-                cout << "DEBUG: sent DISCOVERY_RES with " << sent_bytes << " bytes"
+                cout << "receiveBroadcast: sent DISCOVERY_RES with " << sent_bytes << " bytes"
                      << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
             }
         }

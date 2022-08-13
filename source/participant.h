@@ -19,13 +19,22 @@ enum status
 
 string StatusToString(status s);
 
-typedef struct __participant
+typedef struct
 {
     string hostname;
     string ip;
     string mac;
     status status;
 } participant;
+
+typedef struct
+{
+    string hostname;
+    string mac;
+} participant_res;
+
+participant *decode_participant_payload(char *payload);
+string encode_participant_payload(participant *p);
 
 int startParticipant();
 

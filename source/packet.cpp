@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <cstdlib>
 #include <iostream>
+#include <netdb.h> // to use hostent
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "packet.h"
 
 using namespace std;
@@ -10,21 +13,27 @@ using namespace std;
 // encode packet to string
 string encode_packet(packet *p)
 {
-    return to_string(p->type) + "|" + to_string(p->seqn) + "|" + to_string(sizeof(p->_payload)) + "|" + to_string(p->timestamp) + "|" + p->_payload;
+    return to_string(p->type) + "|" + to_string(p->seqn) + "|" + to_string(strlen(p->_payload)) + "|" + to_string(p->timestamp) + "|" + p->_payload;
 }
 
 // decode packet from string
-packet *decode_packet(string buffer)
+packet_res *decode_packet(string buffer, sockaddr_in *sender)
 {
-    packet *p = (packet *)malloc(sizeof(packet));
-    p->type = atoi(buffer.substr(0, buffer.find("|")).c_str());
-    buffer = buffer.substr(buffer.find("|") + 1);
-    p->seqn = atoi(buffer.substr(0, buffer.find("|")).c_str());
-    buffer = buffer.substr(buffer.find("|") + 1);
-    p->length = atoi(buffer.substr(0, buffer.find("|")).c_str());
-    buffer = buffer.substr(buffer.find("|") + 1);
-    p->timestamp = atoi(buffer.substr(0, buffer.find("|")).c_str());
-    buffer = buffer.substr(buffer.find("|") + 1);
-    p->_payload = buffer.c_str();
+    packet_res *p = new packet_res();
+    char *token = strtok((char *)buffer.c_str(), "|");
+    p->type = (packet_type)atoi(token);
+    token = strtok(NULL, "|");
+    p->seqn = atoi(token);
+    token = strtok(NULL, "|");
+    p->length = atoi(token);
+    token = strtok(NULL, "|");
+    p->timestamp = atoi(token);
+    token = strtok(NULL, "|");
+    token[p->length] = '\0';
+    p->_payload = token;
+
+    char *ip = inet_ntoa(sender->sin_addr);
+    p->sender_ip = ip;
+
     return p;
 }

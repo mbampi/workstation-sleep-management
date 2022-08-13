@@ -10,16 +10,20 @@
 
 int startManager()
 {
+    cout << "startManager: creating discovery thread" << endl;
     thread discoveryThread(discoverySubservice);
 
+    cout << "startManager: creating msg receiver thread" << endl;
     thread messagesReceiverThread(messagesReceiver);
 
+    cout << "startManager: populating fake participants" << endl;
     populateFakeParticipants(); // DEBUG
 
     // interface subservice
     string userInput = "";
     do
     {
+        cout << "startManager: printing participants" << endl;
         printParticipants();
 
         cout << ">> ";
@@ -51,13 +55,14 @@ int discoverySubservice()
         p->_payload = "discovery_service_msg";
         p->seqn = seq_num;
 
+        cout << "discoverySubservice: sending packet " << p->seqn << endl;
         int sent_bytes = broadcastPacket(p, PARTICIPANT_PORT);
         if (sent_bytes < 0)
         {
             cout << "Error sending broadcast" << endl;
             return -1;
         }
-        cout << "DEBUG: broadcasted msg " << seq_num << " to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
+        cout << "discoverySubservice: broadcasted msg " << seq_num << " to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
 
         seq_num++;
         sleep(6);   // wait for 6 seconds
@@ -75,14 +80,34 @@ int messagesReceiver()
         cout << endl;
 
         // receive response
-        cout << "Waiting for message on port " << MANAGER_PORT << endl;
-        packet *response = receivePacket(MANAGER_PORT);
+        cout << "messagesReceiver: Waiting for message on port " << MANAGER_PORT << endl;
+        auto response = receivePacket(MANAGER_PORT);
         if (response == NULL)
         {
-            cout << "Error receiving packet" << endl;
+            cout << "messagesReceiver: Error receiving packet" << endl;
             return -1;
         }
-        cout << "DEBUG: packet response type=" << response->type << " | seqn: " << response->seqn << " | length: " << response->length << " | payload:" << response->_payload << endl;
+        cout << "messagesReceiver: packet response. type=" << response->type << " | seqn=" << response->seqn
+             << " | length=" << response->length << " | payload=" << response->_payload << endl;
+
+        if (response->type == DISCOVERY_RES)
+        {
+            cout << "Received DISCOVERY_RES" << endl;
+
+            participant *p = new participant();
+            p->hostname = response->sender_hostname;
+            p->ip = response->sender_ip;
+            p->mac = response->sender_mac;
+            p->hostname = response->_payload;
+            p->status = awake;
+
+            addParticipant(p);
+        }
+        else
+        {
+            cout << "messagesReceiver: Received UNKNOWN packet" << endl;
+        }
+
     } while (true);
 }
 
@@ -98,7 +123,7 @@ void printParticipants()
          << left << setw(10)
          << "Status"
          << endl;
-    for (const auto p : getParticipants())
+    for (const participant p : getParticipants())
     {
         cout
             << left << setw(12)
@@ -108,31 +133,31 @@ void printParticipants()
             << left << setw(20)
             << p.mac
             << left << setw(10)
-            << p.status // StatusToString(
+            << StatusToString(p.status)
             << endl;
     }
 }
 
 void populateFakeParticipants()
 {
-    participant p1;
-    p1.ip = "1.1.1.1";
-    p1.mac = "01:01:01:01:01:01";
-    p1.status = awake;
-    p1.hostname = "host1";
+    participant *p1 = new participant();
+    p1->ip = "1.1.1.1";
+    p1->mac = "01:01:01:01:01:01";
+    p1->status = awake;
+    p1->hostname = "host1";
     addParticipant(p1);
 
-    participant p2;
-    p2.ip = "1.1.1.2";
-    p2.mac = "02:02:02:02:02:02";
-    p2.status = asleep;
-    p2.hostname = "host2";
+    participant *p2 = new participant();
+    p2->ip = "1.1.1.2";
+    p2->mac = "02:02:02:02:02:02";
+    p2->status = asleep;
+    p2->hostname = "host2";
     addParticipant(p2);
 
-    participant p3;
-    p3.ip = "1.1.1.3";
-    p3.mac = "03:03:03:03:03:03";
-    p3.status = asleep;
-    p3.hostname = "host3";
+    participant *p3 = new participant();
+    p3->ip = "1.1.1.3";
+    p3->mac = "03:03:03:03:03:03";
+    p3->status = asleep;
+    p3->hostname = "host3";
     addParticipant(p3);
 }

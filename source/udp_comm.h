@@ -11,7 +11,7 @@
 
 int sendPacket(char *ip, int port, packet *p);
 
-packet *receivePacket(int on_port);
+packet_res *receivePacket(int on_port);
 
 int broadcastMessage(string msg, int port);
 

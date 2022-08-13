@@ -4,10 +4,11 @@
 map<string, participant> participants_map; // hostname -> participant
 mutex participants_map_mutex;
 
-void addParticipant(participant p)
+void addParticipant(participant *p)
 {
+    cout << "addParticipant: adding participant " << p->hostname << endl;
     participants_map_mutex.lock();
-    participants_map[p.hostname] = p;
+    participants_map[p->hostname] = *p;
     participants_map_mutex.unlock();
 }
 
