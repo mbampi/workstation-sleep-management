@@ -5,6 +5,7 @@ int startManager();
 
 int monitoringSubservice();
 int discoverySubservice();
+int interfaceSubservice();
 int messagesReceiver();
 
 void printParticipants();

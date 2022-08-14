@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <thread>
+#include <algorithm>
 
 #include "participant.h"
 #include "manager.h"
@@ -11,41 +12,72 @@
 
 int startManager()
 {
-    cout << "startManager: creating monitoring thread" << endl;
+    cout << "startManager: creating monitoringSubservice thread" << endl;
     thread monitoringThread(monitoringSubservice);
 
-    cout << "startManager: creating discovery thread" << endl;
+    cout << "startManager: creating discoverySubservice thread" << endl;
     thread discoveryThread(discoverySubservice);
 
-    cout << "startManager: creating msg receiver thread" << endl;
+    cout << "startManager: creating messagesReceiver thread" << endl;
     thread messagesReceiverThread(messagesReceiver);
 
     cout << "startManager: populating fake participants" << endl;
     populateFakeParticipants(); // DEBUG
 
-    string x = IPToHostname("1.1.1.3");
-    cout << x << endl;
-
     // interface subservice
+    cout << "startManager: running interfaceSubservice" << endl;
+    interfaceSubservice();
+
+    cout << ("startManager: Manager EXIT request from user") << endl;
+
+    discoveryThread.join();
+    monitoringThread.join();
+    messagesReceiverThread.join();
+
+    cout << ("startManager: Manager stopped") << endl;
+    return 0;
+}
+
+int interfaceSubservice()
+{
     string userInput = "";
     do
     {
-        cout << "startManager: printing participants" << endl;
-
+        cout << "startManager: interfaceSubservice" << endl;
         cout << ">> ";
         cin >> userInput;
+
+        string cmd = userInput.substr(0, userInput.find(" "));
+        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+
+        if (cmd == "EXIT")
+        {
+            cout << ("startManager: Manager EXIT request from user") << endl;
+        }
+        else if (cmd == "HELP")
+        {
+            cout << "startManager: printing help" << endl;
+            cout << "HELP: print this help" << endl;
+            cout << "EXIT: stop the manager" << endl;
+            cout << "LIST: print the list of participants" << endl;
+            cout << "WAKEUP <hostname>: wake the participant with the given hostname" << endl;
+        }
+        else if (cmd == "LIST")
+        {
+            cout << "startManager: printing participants" << endl;
+            printParticipants();
+        }
+        else if (cmd == "WAKEUP")
+        {
+            string hostname = userInput.substr(userInput.find(" ") + 1);
+            cout << "startManager: waking up participant" << hostname << endl;
+            wakeupParticipant(hostname);
+        }
+        else
+        {
+            cout << "startManager: invalid command" << endl;
+        }
     } while (userInput != "EXIT");
-
-    // TODO: monitoring subservice
-    // TODO: management subservice
-
-    cout << ("Manager EXIT request from user") << endl;
-
-    monitoringThread.join();
-    discoveryThread.join();
-    messagesReceiverThread.join();
-
-    cout << ("Manager stopped") << endl;
     return 0;
 }
 
@@ -146,7 +178,6 @@ int messagesReceiver()
             p->state = awake;
 
             addParticipant(p);
-
             break;
         }
         case MONITORING_RES:
@@ -163,7 +194,6 @@ int messagesReceiver()
             break;
         }
         }
-
     } while (true);
 }
 

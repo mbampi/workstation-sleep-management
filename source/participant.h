@@ -19,7 +19,7 @@ enum status
 
 string StatusToString(status s);
 
-typedef struct
+typedef struct participant
 {
     string hostname;
     string ip;
@@ -28,7 +28,7 @@ typedef struct
     int lost_packets = 0;
 } participant;
 
-typedef struct
+typedef struct participant_res
 {
     string hostname;
     string mac;

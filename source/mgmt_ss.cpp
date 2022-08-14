@@ -4,7 +4,8 @@
 map<string, participant> participants_map; // hostname -> participant
 mutex participants_map_mutex;
 
-status getStatus(string hostname) {
+status getStatus(string hostname)
+{
     participants_map_mutex.lock();
     status state = participants_map[hostname].state;
     participants_map_mutex.unlock();
@@ -26,9 +27,9 @@ string IPToHostname(string ip)
     string hostname;
 
     participants_map_mutex.lock();
-    for (const auto &[h,    p] : participants_map)
+    for (const auto &[h, p] : participants_map)
     {
-        if(p.ip == ip)
+        if (p.ip == ip)
         {
             hostname = p.hostname;
         }
@@ -108,10 +109,18 @@ vector<participant> getParticipants()
 {
     vector<participant> participants;
     participants_map_mutex.lock();
-    for (const auto &[h,    p] : participants_map)
+    for (const auto &[h, p] : participants_map)
     {
         participants.push_back(p);
     }
     participants_map_mutex.unlock();
     return participants;
+}
+
+void wakeupParticipant(string hostname)
+{
+    cout << "wakeupParticipant: waking up " << hostname << endl;
+    participant p = participants_map[hostname];
+    // packet *p = new packet();
+    // sendPacket(p.ip, PARTICIPANT_PORT, "wakeup");
 }

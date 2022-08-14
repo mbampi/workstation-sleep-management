@@ -151,45 +151,41 @@ int receiveBroadcast(int on_port)
         cout << "receiveBroadcast: listening for broadcast on port " << on_port << endl;
 
         int nrecv = recvfrom(s, buf, sizeof(buf), 0, (sockaddr *)&si_other, &slen);
-        cout << "receiveBroadcastBUG: rcvd packet " << buf << " with len=" << nrecv << endl;
+        cout << "receiveBroadcast: rcvd packet " << buf << " with len=" << nrecv << endl;
 
-        bool string_msg = false;
-        if (!string_msg)
+        packet_res *rcvd_packet = decode_packet(buf, &si_other);
+        cout << "receiveBroadcast: packet type=" << rcvd_packet->type
+             << " | seqn=" << rcvd_packet->seqn
+             << " | length=" << rcvd_packet->length
+             << " | payload:" << rcvd_packet->_payload << endl;
+
+        if (rcvd_packet->type == DISCOVERY_REQ)
         {
-            packet_res *rcvd_packet = decode_packet(buf, &si_other);
-            cout << "receiveBroadcast: packet type=" << rcvd_packet->type
-                 << " | seqn=" << rcvd_packet->seqn
-                 << " | length=" << rcvd_packet->length
-                 << " | payload:" << rcvd_packet->_payload << endl;
+            cout << "receiveBroadcast: received DISCOVERY_REQ packet." << endl;
 
-            if (rcvd_packet->type == DISCOVERY_REQ)
-            {
-                cout << "receiveBroadcast: received DISCOVERY_REQ packet." << endl;
+            packet *p = new packet();
+            p->type = DISCOVERY_RES;
+            p->seqn = rcvd_packet->seqn;
+            p->_payload = "notebook_1";
 
-                packet *p = new packet();
-                p->type = DISCOVERY_RES;
-                p->seqn = 0;
-                p->_payload = "notebook_1";
+            char *ip = inet_ntoa(si_other.sin_addr);
+            int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
+            cout << "receiveBroadcast: sent DISCOVERY_RES with " << sent_bytes << " bytes"
+                 << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+        }
+        if (rcvd_packet->type == MONITORING_REQ)
+        {
+            cout << "monitoringBroadcast: received MONITORING_REQ packet." << endl;
 
-                char *ip = inet_ntoa(si_other.sin_addr);
-                int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
-                cout << "receiveBroadcast: sent DISCOVERY_RES with " << sent_bytes << " bytes"
-                     << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
-            }
-            if (rcvd_packet->type == MONITORING_REQ)
-            {
-                cout << "monitoringBroadcast: received MONITORING_REQ packet." << endl;
+            packet *p = new packet();
+            p->type = MONITORING_RES;
+            p->seqn = rcvd_packet->seqn;
+            p->_payload = "notebook_1";
 
-                packet *p = new packet();
-                p->type = MONITORING_RES;
-                p->seqn = 0;
-                p->_payload = "notebook_1";
-
-                char *ip = inet_ntoa(si_other.sin_addr);
-                int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
-                cout << "receivePacket: sent MONITORING_RES with " << sent_bytes << " bytes"
-                     << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
-            }
+            char *ip = inet_ntoa(si_other.sin_addr);
+            int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
+            cout << "receivePacket: sent MONITORING_RES with " << sent_bytes << " bytes"
+                 << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
         }
     }
 }
