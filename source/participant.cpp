@@ -19,13 +19,13 @@ participant *decode_participant_payload(char *payload)
     token = strtok(NULL, ";");
     p->mac = token;
     token = strtok(NULL, ";");
-    p->status = (status)atoi(token);
+    p->state = (status)atoi(token);
     return p;
 }
 
 string encode_participant_payload(participant *p)
 {
-    string payload = p->hostname + ";" + p->ip + ";" + p->mac + ";" + to_string(p->status);
+    string payload = p->hostname + ";" + p->ip + ";" + p->mac + ";" + to_string(p->state);
     return payload;
 }
 
@@ -46,6 +46,9 @@ int startParticipant()
 {
     int n = receiveBroadcast(PARTICIPANT_PORT);
     cout << "Received broadcast " << n << endl;
+
+    packet_res m = *receivePacket(PARTICIPANT_PORT);
+    cout << "Received package" << m.seqn << endl;
 
     cout << "ending participant" << endl;
 

@@ -24,7 +24,8 @@ typedef struct
     string hostname;
     string ip;
     string mac;
-    status status;
+    status state;
+    int lost_packets = 0;
 } participant;
 
 typedef struct

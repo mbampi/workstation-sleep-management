@@ -3,6 +3,7 @@
 
 int startManager();
 
+int monitoringSubservice();
 int discoverySubservice();
 int messagesReceiver();
 

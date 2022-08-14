@@ -16,6 +16,8 @@ enum packet_type
     STATUS_REQ = 2,
     STATUS_RES = 3,
 
+    MONITORING_REQ = 4,
+    MONITORING_RES = 5,
 };
 
 typedef struct

@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <iostream>
+#include <cassert>
 
 #include "udp_comm.h"
 #include "participant.h"
@@ -61,18 +62,23 @@ packet_res *receivePacket(int on_port)
     if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, &true_int, sizeof(true_int)) < 0)
         printf("ERROR on setsockopt reuse port");
 
-    if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(struct sockaddr)) < 0)
+    if (::bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(struct sockaddr)) < 0)
         printf("ERROR on binding");
 
     clilen = sizeof(struct sockaddr_in);
 
     n = recvfrom(sockfd, buf, 256, 0, (struct sockaddr *)&cli_addr, &clilen);
-    if (n < 0)
-        printf("ERROR on recvfrom");
 
     cout << "receivePacket: " << buf << endl;
 
     packet_res *p = decode_packet(buf, &cli_addr);
+
+    if (n < 0)
+    {
+        printf("ERROR on recvfrom");
+        p->sender_hostname = "NULL";
+        p->sender_ip = inet_ntoa((&cli_addr)->sin_addr);
+    }
 
     cout << "receivePacket: decoded packet type=" << p->type << " seqn=" << p->seqn << " length=" << p->length << " timestamp=" << p->timestamp << " payload=" << p->_payload << endl;
     return p;
@@ -168,6 +174,20 @@ int receiveBroadcast(int on_port)
                 char *ip = inet_ntoa(si_other.sin_addr);
                 int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
                 cout << "receiveBroadcast: sent DISCOVERY_RES with " << sent_bytes << " bytes"
+                     << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+            }
+            if (rcvd_packet->type == MONITORING_REQ)
+            {
+                cout << "monitoringBroadcast: received MONITORING_REQ packet." << endl;
+
+                packet *p = new packet();
+                p->type = MONITORING_RES;
+                p->seqn = 0;
+                p->_payload = "notebook_1";
+
+                char *ip = inet_ntoa(si_other.sin_addr);
+                int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
+                cout << "receivePacket: sent MONITORING_RES with " << sent_bytes << " bytes"
                      << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
             }
         }
