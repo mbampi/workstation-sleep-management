@@ -13,7 +13,7 @@ using namespace std;
 // encode packet to string
 string encode_packet(packet *p)
 {
-    return to_string(p->type) + "|" + to_string(p->seqn) + "|" + to_string(strlen(p->_payload)) + "|" + to_string(p->timestamp) + "|" + p->_payload;
+    return to_string(p->type) + "|" + to_string(p->seqn) + "|" + to_string(p->payload.length()) + "|" + to_string(p->timestamp) + "|" + p->payload;
 }
 
 // decode packet from string
@@ -30,7 +30,7 @@ packet_res *decode_packet(string buffer, sockaddr_in *sender)
     p->timestamp = atoi(token);
     token = strtok(NULL, "|");
     token[p->length] = '\0';
-    p->_payload = token;
+    p->payload = token;
 
     char *ip = inet_ntoa(sender->sin_addr);
     p->sender_ip = ip;

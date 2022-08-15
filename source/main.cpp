@@ -9,6 +9,11 @@
 
 using namespace std;
 
+void signalHandler(int signum)
+{
+    cout << "Signal " << signum << " received." << endl;
+}
+
 int main(int argc, char *argv[])
 {
     cout << ("Workstation Sleep Manager\n") << endl;
@@ -18,6 +23,10 @@ int main(int argc, char *argv[])
         isManager = (strcmp(argv[1], "manager") == 0);
 
     cout << ("Started") << endl;
+
+    signal(SIGINT, signalHandler);  // Ctrl + C
+    signal(SIGTERM, signalHandler); // kill
+    signal(SIGABRT, signalHandler); // abort
 
     if (isManager)
     {

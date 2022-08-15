@@ -12,11 +12,11 @@
 
 int startManager()
 {
-    cout << "startManager: creating monitoringSubservice thread" << endl;
-    thread monitoringThread(monitoringSubservice);
-
     cout << "startManager: creating discoverySubservice thread" << endl;
     thread discoveryThread(discoverySubservice);
+
+    cout << "startManager: creating monitoringSubservice thread" << endl;
+    thread monitoringThread(monitoringSubservice);
 
     cout << "startManager: creating messagesReceiver thread" << endl;
     thread messagesReceiverThread(messagesReceiver);
@@ -40,13 +40,11 @@ int startManager()
 
 int interfaceSubservice()
 {
-    string userInput = "";
-    do
+    string userInput;
+    cout << "interfaceSubservice" << endl;
+    cout << ">> ";
+    while (std::getline(std::cin, userInput))
     {
-        cout << "startManager: interfaceSubservice" << endl;
-        cout << ">> ";
-        cin >> userInput;
-
         string cmd = userInput.substr(0, userInput.find(" "));
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 
@@ -77,7 +75,10 @@ int interfaceSubservice()
         {
             cout << "startManager: invalid command" << endl;
         }
-    } while (userInput != "EXIT");
+        cout << ">> ";
+    };
+
+    managerExit();
     return 0;
 }
 
@@ -91,7 +92,7 @@ int monitoringSubservice()
 
         packet *p = new packet();
         p->type = MONITORING_REQ;
-        p->_payload = "monitoring_service_msg";
+        p->payload = "monitoring_service_msg";
         p->seqn = seq_num;
 
         cout << "monitoringSubservice: sending packet " << p->seqn << endl;
@@ -121,7 +122,7 @@ int discoverySubservice()
 
         packet *p = new packet();
         p->type = DISCOVERY_REQ;
-        p->_payload = "discovery_service_msg";
+        p->payload = "discovery_service_msg";
         p->seqn = seq_num;
 
         cout << "discoverySubservice: sending packet " << p->seqn << endl;
@@ -162,7 +163,7 @@ int messagesReceiver()
             }
         }
         cout << "messagesReceiver: packet response. type=" << response->type << " | seqn=" << response->seqn
-             << " | length=" << response->length << " | payload=" << response->_payload << endl;
+             << " | length=" << response->length << " | payload=" << response->payload << endl;
 
         switch (response->type)
         {
@@ -174,7 +175,7 @@ int messagesReceiver()
             p->hostname = response->sender_hostname;
             p->ip = response->sender_ip;
             p->mac = response->sender_mac;
-            p->hostname = response->_payload;
+            p->hostname = response->payload;
             p->state = awake;
 
             addParticipant(p);
@@ -183,9 +184,15 @@ int messagesReceiver()
         case MONITORING_RES:
         {
             cout << "Received MONITORING_RES" << endl;
-            zeroLostPackets(response->_payload); // hostname está em payload
-            if (getStatus(response->_payload) != awake)
-                changeParticipantStatus(response->_payload, awake);
+            zeroLostPackets(response->payload); // hostname está em payload
+            if (getStatus(response->payload) != awake)
+                changeParticipantStatus(response->payload, awake);
+            break;
+        }
+        case EXIT_REQ:
+        {
+            cout << "Received EXIT_REQ" << endl;
+            removeParticipant(response->sender_hostname);
             break;
         }
         default:
@@ -195,6 +202,13 @@ int messagesReceiver()
         }
         }
     } while (true);
+}
+
+void managerExit()
+{
+    cout << "managerExit" << endl;
+    // TODO: terminate threads
+    exit(0);
 }
 
 void populateFakeParticipants()

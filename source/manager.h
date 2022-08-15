@@ -8,6 +8,8 @@ int discoverySubservice();
 int interfaceSubservice();
 int messagesReceiver();
 
+void managerExit();
+
 void printParticipants();
 
 void populateFakeParticipants();

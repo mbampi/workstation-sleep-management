@@ -18,15 +18,17 @@ enum packet_type
 
     MONITORING_REQ = 4,
     MONITORING_RES = 5,
+
+    EXIT_REQ = 6,
 };
 
 typedef struct
 {
-    uint16_t type;        // Tipo do pacote (p.ex. DATA | CMD)
-    uint16_t seqn;        // Número de sequência
-    uint16_t length;      // Comprimento do payload
-    uint16_t timestamp;   // Timestamp do dado
-    const char *_payload; // Dados da mensagem
+    uint16_t type;      // Tipo do pacote (p.ex. DATA | CMD)
+    uint16_t seqn;      // Número de sequência
+    uint16_t length;    // Comprimento do payload
+    uint16_t timestamp; // Timestamp do dado
+    string payload;     // Dados da mensagem
 } packet;
 
 typedef struct
@@ -35,7 +37,7 @@ typedef struct
     uint16_t seqn;      // Número de sequência
     uint16_t length;    // Comprimento do payload
     uint16_t timestamp; // Timestamp do dado
-    string _payload;    // Dados da mensagem
+    string payload;     // Dados da mensagem
 
     string sender_ip;       // IP do sender
     string sender_mac;      // MAC do sender
