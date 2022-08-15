@@ -12,7 +12,7 @@
 
 using namespace std;
 
-char *managerIP;
+extern char *managerIP;
 
 enum status
 {

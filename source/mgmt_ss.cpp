@@ -4,6 +4,8 @@
 map<string, participant> participants_map; // hostname -> participant
 mutex participants_map_mutex;
 
+std::atomic_bool stop_program = false;
+
 status getStatus(string hostname)
 {
     participants_map_mutex.lock();

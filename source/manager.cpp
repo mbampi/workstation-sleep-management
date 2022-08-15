@@ -41,11 +41,12 @@ int startManager()
 int interfaceSubservice()
 {
     string userInput;
+    string cmd = "";
     cout << "interfaceSubservice" << endl;
     cout << ">> ";
-    while (std::getline(std::cin, userInput))
+    while ((!stop_program) && (cmd != "EXIT") && (std::getline(std::cin, userInput)))
     {
-        string cmd = userInput.substr(0, userInput.find(" "));
+        cmd = userInput.substr(0, userInput.find(" "));
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 
         if (cmd == "EXIT")
@@ -105,8 +106,8 @@ int monitoringSubservice()
         cout << "monitoringSubservice: broadcasted msg " << seq_num << " to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
 
         seq_num++;
-        sleep(6);   // wait for 6 seconds
-    } while (true); // TODO: add condition to stop
+        sleep(6);            // wait for 6 seconds
+    } while (!stop_program); // TODO: add condition to stop
 
     cout << "ending monitoring" << endl;
     return 0;
@@ -135,8 +136,8 @@ int discoverySubservice()
         cout << "discoverySubservice: broadcasted msg " << seq_num << " to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
 
         seq_num++;
-        sleep(6);   // wait for 6 seconds
-    } while (true); // TODO: add condition to stop
+        sleep(6); // wait for 6 seconds
+    } while (!stop_program);
 
     cout << "ending discovery" << endl;
     return 0;
@@ -201,13 +202,14 @@ int messagesReceiver()
             break;
         }
         }
-    } while (true);
+    } while (!stop_program);
+    return 0;
 }
 
 void managerExit()
 {
     cout << "managerExit" << endl;
-    // TODO: terminate threads
+    stop_program = true;
     exit(0);
 }
 

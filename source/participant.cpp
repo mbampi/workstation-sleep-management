@@ -9,9 +9,12 @@
 
 #include "packet.h"
 #include "udp_comm.h"
+#include "mgmt_ss.h"
 #include "participant.h"
 
 using namespace std;
+
+char *managerIP;
 
 participant *decode_participantpayload(char *payload)
 {
@@ -67,7 +70,7 @@ void participantInterface()
     string cmd = "";
     cout << "interfaceSubservice" << endl;
     cout << ">> ";
-    while ((cmd != "EXIT") || (std::getline(std::cin, userInput)))
+    while ((cmd != "EXIT") && (std::getline(std::cin, userInput)))
     {
         cmd = userInput.substr(0, userInput.find(" "));
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
@@ -85,6 +88,7 @@ void participantExit()
     exitPacket->payload = "exit request";
     sendPacket(managerIP, MANAGER_PORT, exitPacket);
 
+    stop_program = true;
     exit(0);
 }
 

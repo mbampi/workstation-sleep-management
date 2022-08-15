@@ -11,6 +11,8 @@
 
 using namespace std;
 
+extern std::atomic_bool stop_program;
+
 status getStatus(string hostname);
 bool compareLostPackets(string hostname, int n);
 string IPToHostname(string ip);

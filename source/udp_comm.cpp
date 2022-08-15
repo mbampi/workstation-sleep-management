@@ -13,6 +13,7 @@
 #include <cassert>
 
 #include "udp_comm.h"
+#include "mgmt_ss.h"
 #include "participant.h"
 
 using namespace std;
@@ -143,7 +144,7 @@ int receiveBroadcast(int on_port)
 
     assert(::bind(s, (sockaddr *)&si_me, sizeof(sockaddr)) != -1);
 
-    while (true)
+    while (!stop_program)
     {
         std::cout << std::endl;
         char buf[10000];
@@ -190,4 +191,5 @@ int receiveBroadcast(int on_port)
                  << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
         }
     }
+    return 0;
 }
