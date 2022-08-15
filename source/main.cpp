@@ -4,6 +4,7 @@
 
 #include "packet.h"
 #include "udp_comm.h"
+#include "mgmt_ss.h"
 #include "participant.h"
 #include "manager.h"
 
@@ -12,6 +13,7 @@ using namespace std;
 void signalHandler(int signum)
 {
     cout << "Signal " << signum << " received." << endl;
+    stop_program = true;
 }
 
 int main(int argc, char *argv[])
