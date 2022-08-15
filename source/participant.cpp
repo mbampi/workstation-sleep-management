@@ -16,23 +16,21 @@ using namespace std;
 
 char *managerIP;
 
-participant *decode_participantpayload(char *payload)
+participant *decode_participantpayload(string payload)
 {
     participant *p = new participant();
-    char *token = strtok(payload, ";");
+    char *token = strtok((char *)payload.c_str(), ";");
     p->hostname = token;
     token = strtok(NULL, ";");
-    p->ip = token;
-    token = strtok(NULL, ";");
     p->mac = token;
-    token = strtok(NULL, ";");
-    p->state = (status)atoi(token);
     return p;
 }
 
-string encode_participantpayload(participant *p)
+string encode_participantpayload()
 {
-    string payload = p->hostname + ";" + p->ip + ";" + p->mac + ";" + to_string(p->state);
+    string hostname = getHostname();
+    string mac = getMacAddr();
+    string payload = hostname + ";" + mac + ";";
     return payload;
 }
 

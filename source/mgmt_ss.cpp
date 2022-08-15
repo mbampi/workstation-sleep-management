@@ -58,9 +58,9 @@ void incrementLostPackets(string hostname)
 void printParticipants()
 {
     cout << setw(15) << "\nPARTICIPANTS" << endl;
-    cout << left << setw(12)
+    cout << left << setw(20)
          << "Hostname"
-         << left << setw(12)
+         << left << setw(20)
          << "IP"
          << left << setw(20)
          << "MAC"
@@ -70,9 +70,9 @@ void printParticipants()
     for (const participant p : getParticipants())
     {
         cout
-            << left << setw(12)
+            << left << setw(20)
             << p.hostname
-            << left << setw(12)
+            << left << setw(20)
             << p.ip
             << left << setw(20)
             << p.mac

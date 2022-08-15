@@ -37,8 +37,8 @@ typedef struct participant_res
     string mac;
 } participant_res;
 
-participant *decode_participantpayload(char *payload);
-string encode_participantpayload(participant *p);
+participant *decode_participantpayload(string payload);
+string encode_participantpayload();
 
 int startParticipant();
 void participantExit();

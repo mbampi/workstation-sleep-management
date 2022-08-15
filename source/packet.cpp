@@ -6,6 +6,8 @@
 #include <netdb.h> // to use hostent
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#include "participant.h"
 #include "packet.h"
 
 using namespace std;
@@ -31,6 +33,13 @@ packet_res *decode_packet(string buffer, sockaddr_in *sender)
     token = strtok(NULL, "|");
     token[p->length] = '\0';
     p->payload = token;
+
+    if (p->type == DISCOVERY_RES)
+    {
+        participant *part = decode_participantpayload(p->payload);
+        p->sender_hostname = part->hostname;
+        p->sender_mac = part->mac;
+    }
 
     char *ip = inet_ntoa(sender->sin_addr);
     p->sender_ip = ip;

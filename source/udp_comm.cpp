@@ -12,6 +12,11 @@
 #include <iostream>
 #include <cassert>
 
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <array>
+
 #include "udp_comm.h"
 #include "mgmt_ss.h"
 #include "participant.h"
@@ -169,7 +174,7 @@ int receiveBroadcast(int on_port)
             packet *p = new packet();
             p->type = DISCOVERY_RES;
             p->seqn = rcvd_packet->seqn;
-            p->payload = "notebook_1";
+            p->payload = encode_participantpayload();
 
             char *ip = inet_ntoa(si_other.sin_addr);
             int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
@@ -192,4 +197,31 @@ int receiveBroadcast(int on_port)
         }
     }
     return 0;
+}
+
+string exec(const char *cmd)
+{
+    array<char, 128> buffer;
+    string result;
+    unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    if (!pipe)
+        throw runtime_error("popen() failed!");
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
+        result += buffer.data();
+    return result;
+}
+
+string getMacAddr()
+{
+    string MAC = exec("ifconfig en1 | awk '/ether/{print $2}'");
+    return MAC;
+}
+
+string getHostname()
+{
+    string hostname = exec("hostname");
+    string::size_type pos = hostname.find('.');
+    if (pos > 0)
+        hostname = hostname.substr(0, pos);
+    return hostname;
 }

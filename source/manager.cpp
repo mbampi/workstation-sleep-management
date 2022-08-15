@@ -44,7 +44,7 @@ int interfaceSubservice()
     string cmd = "";
     cout << "interfaceSubservice" << endl;
     cout << ">> ";
-    while ((!stop_program) && (cmd != "EXIT") && (std::getline(std::cin, userInput)))
+    while ((!stop_program) && (cmd != "EXIT") && (getline(cin, userInput)))
     {
         cmd = userInput.substr(0, userInput.find(" "));
         std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
@@ -173,10 +173,9 @@ int messagesReceiver()
             cout << "Received DISCOVERY_RES" << endl;
 
             participant *p = new participant();
-            p->hostname = response->sender_hostname;
             p->ip = response->sender_ip;
             p->mac = response->sender_mac;
-            p->hostname = response->payload;
+            p->hostname = response->sender_hostname;
             p->state = awake;
 
             addParticipant(p);

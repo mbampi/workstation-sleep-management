@@ -19,4 +19,7 @@ int broadcastPacket(packet *msg, int port);
 
 int receiveBroadcast(int on_port);
 
+string getMacAddr();
+string getHostname();
+
 #endif
