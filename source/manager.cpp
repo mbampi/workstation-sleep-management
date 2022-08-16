@@ -12,29 +12,35 @@
 
 int startManager()
 {
-    cout << "startManager: creating discoverySubservice thread" << endl;
+    if (debug_mode)
+        cout << "startManager: creating discoverySubservice thread" << endl;
     thread discoveryThread(discoverySubservice);
 
-    cout << "startManager: creating monitoringSubservice thread" << endl;
+    if (debug_mode)
+        cout << "startManager: creating monitoringSubservice thread" << endl;
     thread monitoringThread(monitoringSubservice);
 
-    cout << "startManager: creating messagesReceiver thread" << endl;
+    if (debug_mode)
+        cout << "startManager: creating messagesReceiver thread" << endl;
     thread messagesReceiverThread(messagesReceiver);
 
-    cout << "startManager: populating fake participants" << endl;
+    if (debug_mode)
+        cout << "startManager: populating fake participants" << endl;
     // populateFakeParticipants(); // DEBUG
 
-    // interface subservice
-    cout << "startManager: running interfaceSubservice" << endl;
+    if (debug_mode)
+        cout << "startManager: running interfaceSubservice" << endl;
     interfaceSubservice();
 
-    cout << ("startManager: Manager EXIT request from user") << endl;
+    if (debug_mode)
+        cout << ("startManager: Manager EXIT request from user") << endl;
 
     discoveryThread.join();
     monitoringThread.join();
     messagesReceiverThread.join();
 
-    cout << ("startManager: Manager stopped") << endl;
+    if (debug_mode)
+        cout << ("startManager: Manager stopped") << endl;
     return 0;
 }
 
@@ -42,7 +48,8 @@ int interfaceSubservice()
 {
     string userInput;
     string cmd = "";
-    cout << "interfaceSubservice" << endl;
+    if (debug_mode)
+        cout << "interfaceSubservice" << endl;
     cout << ">> ";
     while ((!stop_program) && (cmd != "EXIT") && (getline(cin, userInput)))
     {
@@ -51,30 +58,36 @@ int interfaceSubservice()
 
         if (cmd == "EXIT")
         {
-            cout << ("startManager: Manager EXIT request from user") << endl;
+            if (debug_mode)
+                cout << ("startManager: Manager EXIT request from user") << endl;
         }
         else if (cmd == "HELP")
         {
-            cout << "startManager: printing help" << endl;
+            if (debug_mode)
+                cout << "startManager: printing help" << endl;
+            cout << endl;
             cout << "HELP: print this help" << endl;
             cout << "EXIT: stop the manager" << endl;
             cout << "LIST: print the list of participants" << endl;
             cout << "WAKEUP <hostname>: wake the participant with the given hostname" << endl;
+            cout << endl;
         }
         else if (cmd == "LIST")
         {
-            cout << "startManager: printing participants" << endl;
+            if (debug_mode)
+                cout << "startManager: printing participants" << endl;
             printParticipants();
         }
         else if (cmd == "WAKEUP")
         {
             string hostname = userInput.substr(userInput.find(" ") + 1);
-            cout << "startManager: waking up participant " << hostname << endl;
+            if (debug_mode)
+                cout << "startManager: waking up participant " << hostname << endl;
             wakeupParticipant(hostname);
         }
         else
         {
-            cout << "startManager: invalid command" << endl;
+            cout << "Invalid command" << endl;
         }
         cout << ">> ";
     };
@@ -85,10 +98,12 @@ int interfaceSubservice()
 
 int monitoringSubservice()
 {
-    cout << "Started MonitoringSubservice" << endl;
+    if (debug_mode)
+        cout << "Started MonitoringSubservice" << endl;
     do
     {
-        cout << endl;
+        if (debug_mode)
+            cout << endl;
 
         packet *p = new packet();
         p->type = MONITORING_REQ;
@@ -98,7 +113,8 @@ int monitoringSubservice()
         p->sender_hostname = getHostname();
         p->sender_ip = getIpAddr();
 
-        cout << "monitoringSubservice: sending packet " << p->seqn << endl;
+        if (debug_mode)
+            cout << "monitoringSubservice: sending packet " << p->seqn << endl;
         for (const participant part : getParticipants())
         {
             int sent_bytes = sendPacket((char *)part.ip.c_str(), PARTICIPANT_PORT, p);
@@ -107,21 +123,25 @@ int monitoringSubservice()
                 cout << "Error sending broadcast to participant " << part.hostname << endl;
                 return -1;
             }
-            cout << "monitoringSubservice: sent msg to " << part.hostname << " with size " << sent_bytes << endl;
+            if (debug_mode)
+                cout << "monitoringSubservice: sent msg to " << part.hostname << " with size " << sent_bytes << endl;
         }
         sleep(6);            // wait for 6 seconds
     } while (!stop_program); // TODO: add condition to stop
 
-    cout << "ending monitoring" << endl;
+    if (debug_mode)
+        cout << "ending monitoring" << endl;
     return 0;
 }
 
 int discoverySubservice()
 {
-    cout << "Started DiscoverySubservice" << endl;
+    if (debug_mode)
+        cout << "Started DiscoverySubservice" << endl;
     do
     {
-        cout << endl;
+        if (debug_mode)
+            cout << endl;
 
         packet *p = new packet();
         p->type = DISCOVERY_REQ;
@@ -131,7 +151,8 @@ int discoverySubservice()
         p->sender_hostname = getHostname();
         p->sender_ip = getIpAddr();
 
-        cout << "discoverySubservice: sending packet " << p->seqn << endl;
+        if (debug_mode)
+            cout << "discoverySubservice: sending packet " << p->seqn << endl;
 
         int sent_bytes = broadcastPacket(p, PARTICIPANT_PORT);
         if (sent_bytes < 0)
@@ -139,23 +160,27 @@ int discoverySubservice()
             cout << "Error sending broadcast" << endl;
             return -1;
         }
-        cout << "discoverySubservice: broadcasted msg to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
+        if (debug_mode)
+            cout << "discoverySubservice: broadcasted msg to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
         sleep(6); // wait for 6 seconds
     } while (!stop_program);
-
-    cout << "ending discovery" << endl;
+    if (debug_mode)
+        cout << "ending discovery" << endl;
     return 0;
 }
 
 int messagesReceiver()
 {
-    cout << "Started MessagesReceiver" << endl;
+    if (debug_mode)
+        cout << "Started MessagesReceiver" << endl;
     do
     {
-        cout << endl;
+        if (debug_mode)
+            cout << endl;
 
         // receive response
-        cout << "messagesReceiver: Waiting for message on port " << MANAGER_PORT << endl;
+        if (debug_mode)
+            cout << "messagesReceiver: Waiting for message on port " << MANAGER_PORT << endl;
         auto response = receivePacket(MANAGER_PORT);
         if (response->sender_hostname == "NULL")
         {
@@ -167,14 +192,16 @@ int messagesReceiver()
                     changeParticipantStatus(hn, asleep);
             }
         }
-        cout << "messagesReceiver: packet response. type=" << response->type << " | seqn=" << response->seqn
-             << " | length=" << response->length << " | payload=" << response->payload << endl;
+        if (debug_mode)
+            cout << "messagesReceiver: packet response. type=" << response->type << " | seqn=" << response->seqn
+                 << " | length=" << response->length << " | payload=" << response->payload << endl;
 
         switch (response->type)
         {
         case DISCOVERY_RES:
         {
-            cout << "Received DISCOVERY_RES" << endl;
+            if (debug_mode)
+                cout << "Received DISCOVERY_RES" << endl;
 
             participant *p = new participant();
             p->ip = response->sender_ip;
@@ -187,7 +214,8 @@ int messagesReceiver()
         }
         case MONITORING_RES:
         {
-            cout << "Received MONITORING_RES" << endl;
+            if (debug_mode)
+                cout << "Received MONITORING_RES" << endl;
             zeroLostPackets(response->payload); // hostname está em payload
             if (getStatus(response->payload) != awake)
                 changeParticipantStatus(response->payload, awake);
@@ -195,13 +223,15 @@ int messagesReceiver()
         }
         case EXIT_REQ:
         {
-            cout << "Received EXIT_REQ" << endl;
+            if (debug_mode)
+                cout << "Received EXIT_REQ" << endl;
             removeParticipant(response->sender_hostname);
             break;
         }
         default:
         {
-            cout << "messagesReceiver: Received UNKNOWN packet" << endl;
+            if (debug_mode)
+                cout << "messagesReceiver: Received UNKNOWN packet" << endl;
             break;
         }
         }
@@ -211,7 +241,8 @@ int messagesReceiver()
 
 void managerExit()
 {
-    cout << "managerExit" << endl;
+    if (debug_mode)
+        cout << "managerExit" << endl;
     stop_program = true;
     exit(0);
 }

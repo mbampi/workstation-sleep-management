@@ -7,6 +7,7 @@ map<string, participant> participants_map; // hostname -> participant
 mutex participants_map_mutex;
 
 atomic_bool stop_program = {false};
+atomic_bool debug_mode = {false};
 
 status getStatus(string hostname)
 {
@@ -85,7 +86,8 @@ void printParticipants()
 
 void addParticipant(participant *p)
 {
-    cout << "\naddParticipant: adding participant " << p->hostname << endl;
+    if (debug_mode)
+        cout << "\naddParticipant: adding participant " << p->hostname << endl;
     participants_map_mutex.lock();
     participants_map[p->hostname] = *p;
     participants_map_mutex.unlock();
@@ -120,7 +122,8 @@ vector<participant> getParticipants()
 
 void wakeupParticipant(string hostname)
 {
-    cout << "wakeupParticipant: waking up " << hostname << endl;
+    if (debug_mode)
+        cout << "wakeupParticipant: waking up " << hostname << endl;
     auto p = participants_map[hostname];
     sendWakeOnLan(p.mac);
 }

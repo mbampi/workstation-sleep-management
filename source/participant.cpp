@@ -32,7 +32,8 @@ string StatusToString(status s)
 
 int startParticipant()
 {
-    cout << "Started Participant" << endl;
+    if (debug_mode)
+        cout << "Started Participant" << endl;
 
     thread broadcastReceiverThread(broadcastSubservice);
 
@@ -40,7 +41,8 @@ int startParticipant()
 
     broadcastReceiverThread.join();
 
-    cout << "ending participant" << endl;
+    if (debug_mode)
+        cout << "ending participant" << endl;
 
     return 0;
 }
@@ -49,7 +51,8 @@ void participantInterface()
 {
     string userInput;
     string cmd = "";
-    cout << "interfaceSubservice" << endl;
+    if (debug_mode)
+        cout << "interfaceSubservice" << endl;
     cout << ">> ";
     while ((!stop_program) && (cmd != "EXIT") && (std::getline(std::cin, userInput)))
     {
@@ -62,7 +65,8 @@ void participantInterface()
 
 void participantExit()
 {
-    cout << "participantExit: Participant EXIT request from user" << endl;
+    if (debug_mode)
+        cout << "participantExit: Participant EXIT request from user" << endl;
 
     packet *p = new packet();
     p->type = EXIT_REQ;

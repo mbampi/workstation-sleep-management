@@ -13,6 +13,7 @@
 using namespace std;
 
 extern atomic_bool stop_program;
+extern atomic_bool debug_mode;
 
 status getStatus(string hostname);
 bool compareLostPackets(string hostname, int n);

@@ -45,7 +45,8 @@ int sendPacket(char *ip, int port, packet *p)
     p->seqn = seqn++;
     string encoded_msg = encode_packet(p);
     int len = strlen(encoded_msg.c_str());
-    cout << "sendPacket=" << encoded_msg << " with len=" << len << endl;
+    if (debug_mode)
+        cout << "sendPacket=" << encoded_msg << " with len=" << len << endl;
     n = sendto(sockfd, encoded_msg.c_str(), len, 0, (const struct sockaddr *)&serv_addr, sizeof(struct sockaddr_in));
     if (n < 0)
         printf("ERROR sendto");
@@ -78,7 +79,8 @@ packet *receivePacket(int on_port)
 
     n = recvfrom(sockfd, buf, 256, 0, (struct sockaddr *)&cli_addr, &clilen);
 
-    cout << "receivePacket: " << buf << endl;
+    if (debug_mode)
+        cout << "receivePacket: " << buf << endl;
 
     packet *p = decode_packet(buf, &cli_addr);
 
@@ -89,7 +91,8 @@ packet *receivePacket(int on_port)
         p->sender_ip = inet_ntoa((&cli_addr)->sin_addr);
     }
 
-    cout << "receivePacket: decoded packet type=" << p->type << " seqn=" << p->seqn << " length=" << p->length << " timestamp=" << p->timestamp << " payload=" << p->payload << endl;
+    if (debug_mode)
+        cout << "receivePacket: decoded packet type=" << p->type << " seqn=" << p->seqn << " length=" << p->length << " timestamp=" << p->timestamp << " payload=" << p->payload << endl;
     return p;
 }
 
@@ -112,7 +115,8 @@ int broadcastPacket(packet *msg, int port)
     msg->seqn = seqn++;
     string encoded_msg = encode_packet(msg);
     int len = strlen(encoded_msg.c_str());
-    cout << "broadcastPacket=" << encoded_msg << " with len=" << len << endl;
+    if (debug_mode)
+        cout << "broadcastPacket=" << encoded_msg << " with len=" << len << endl;
     int bytes_sent = sendto(fd, encoded_msg.c_str(), len, 0, (struct sockaddr *)&addr, sizeof(addr));
 
     return bytes_sent;
@@ -136,23 +140,28 @@ int receiveBroadcast(int on_port)
 
     while (!stop_program)
     {
-        std::cout << std::endl;
+        if (debug_mode)
+            cout << endl;
         char buf[10000];
         unsigned slen = sizeof(sockaddr);
-        cout << "receiveBroadcast: listening for broadcast on port " << on_port << endl;
+        if (debug_mode)
+            cout << "receiveBroadcast: listening for broadcast on port " << on_port << endl;
 
         int nrecv = recvfrom(s, buf, sizeof(buf), 0, (sockaddr *)&si_other, &slen);
-        cout << "receiveBroadcast: rcvd packet " << buf << " with len=" << nrecv << endl;
+        if (debug_mode)
+            cout << "receiveBroadcast: rcvd packet " << buf << " with len=" << nrecv << endl;
 
         packet *rcvd_packet = decode_packet(buf, &si_other);
-        cout << "receiveBroadcast: packet type=" << rcvd_packet->type
-             << " | seqn=" << rcvd_packet->seqn
-             << " | length=" << rcvd_packet->length
-             << " | payload:" << rcvd_packet->payload << endl;
+        if (debug_mode)
+            cout << "receiveBroadcast: packet type=" << rcvd_packet->type
+                 << " | seqn=" << rcvd_packet->seqn
+                 << " | length=" << rcvd_packet->length
+                 << " | payload:" << rcvd_packet->payload << endl;
 
         if (rcvd_packet->type == DISCOVERY_REQ)
         {
-            cout << "receiveBroadcast: received DISCOVERY_REQ packet." << endl;
+            if (debug_mode)
+                cout << "receiveBroadcast: received DISCOVERY_REQ packet." << endl;
 
             managerIP = inet_ntoa(si_other.sin_addr);
 
@@ -167,12 +176,14 @@ int receiveBroadcast(int on_port)
 
             char *ip = inet_ntoa(si_other.sin_addr);
             int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
-            cout << "receiveBroadcast: sent DISCOVERY_RES with " << sent_bytes << " bytes"
-                 << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+            if (debug_mode)
+                cout << "receiveBroadcast: sent DISCOVERY_RES with " << sent_bytes << " bytes"
+                     << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
         }
         if (rcvd_packet->type == MONITORING_REQ)
         {
-            cout << "monitoringBroadcast: received MONITORING_REQ packet." << endl;
+            if (debug_mode)
+                cout << "monitoringBroadcast: received MONITORING_REQ packet." << endl;
 
             packet *p = new packet();
             p->type = MONITORING_RES;
@@ -185,8 +196,9 @@ int receiveBroadcast(int on_port)
 
             char *ip = inet_ntoa(si_other.sin_addr);
             int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
-            cout << "receivePacket: sent MONITORING_RES with " << sent_bytes << " bytes"
-                 << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+            if (debug_mode)
+                cout << "receivePacket: sent MONITORING_RES with " << sent_bytes << " bytes"
+                     << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
         }
     }
     return 0;
@@ -250,5 +262,6 @@ void sendWakeOnLan(string mac)
     cout << "sendWakeOnLan: sending wake on lan to mac=" << mac << endl;
     string cmd = "wakeonlan " + mac;
     string res = exec(cmd.c_str());
-    cout << "sendWakeOnLan: retured " << res << endl;
+    if (debug_mode)
+        cout << "sendWakeOnLan: retured " << res << endl;
 }
