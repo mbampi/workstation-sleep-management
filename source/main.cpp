@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <iostream>
+#include <csignal>
 
 #include "packet.h"
 #include "udp_comm.h"

@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string.h>
 #include <thread>
+#include <algorithm>
 
 #include "packet.h"
 #include "udp_comm.h"
@@ -20,9 +21,8 @@ participant *decode_participantpayload(string payload)
 {
     participant *p = new participant();
     char *token = strtok((char *)payload.c_str(), ";");
-    p->hostname = token;
-    token = strtok(NULL, ";");
-    p->mac = token;
+    p->hostname = token[0];
+    p->mac = token[1];
     return p;
 }
 

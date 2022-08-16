@@ -6,6 +6,7 @@
 #include <mutex>
 #include <vector>
 #include <iomanip> // to use setw
+#include <atomic>
 
 #include "participant.h"
 
