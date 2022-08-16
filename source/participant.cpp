@@ -64,11 +64,14 @@ void participantExit()
 {
     cout << "participantExit: Participant EXIT request from user" << endl;
 
-    packet *exitPacket = new packet();
-    exitPacket->type = EXIT_REQ;
-    exitPacket->seqn = 0;
-    exitPacket->payload = "exit request";
-    sendPacket(managerIP, MANAGER_PORT, exitPacket);
+    packet *p = new packet();
+    p->type = EXIT_REQ;
+    p->payload = "exit request";
+    p->timestamp = getTimestamp();
+    p->sender_mac = getMacAddr();
+    p->sender_hostname = getHostname();
+    p->sender_ip = getIpAddr();
+    sendPacket(managerIP, MANAGER_PORT, p);
 
     stop_program = true;
     exit(0);

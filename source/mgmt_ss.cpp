@@ -87,8 +87,6 @@ void printParticipants()
 void addParticipant(participant *p)
 {
     cout << "\naddParticipant: adding participant " << p->hostname << endl;
-    cout << "|" << p->mac << "|";
-    cout << "|" << p->ip << "|";
     participants_map_mutex.lock();
     participants_map[p->hostname] = *p;
     participants_map_mutex.unlock();

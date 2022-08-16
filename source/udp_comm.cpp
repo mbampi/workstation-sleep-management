@@ -160,6 +160,7 @@ int receiveBroadcast(int on_port)
             p->type = DISCOVERY_RES;
             p->seqn = rcvd_packet->seqn;
             p->payload = "i do exist";
+            p->timestamp = getTimestamp();
             p->sender_mac = getMacAddr();
             p->sender_hostname = getHostname();
             p->sender_ip = getIpAddr();
@@ -176,6 +177,7 @@ int receiveBroadcast(int on_port)
             packet *p = new packet();
             p->type = MONITORING_RES;
             p->seqn = rcvd_packet->seqn;
+            p->timestamp = getTimestamp();
             p->payload = "i am awake";
             p->sender_mac = getMacAddr();
             p->sender_hostname = getHostname();
@@ -222,6 +224,8 @@ string getHostname()
     string::size_type pos = hostname.find('.');
     if (pos > 0)
         hostname = hostname.substr(0, pos);
+    if (hostname.empty())
+        hostname = "unknown hostname";
     hostname = trim(hostname);
     return hostname;
 }

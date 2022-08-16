@@ -107,7 +107,7 @@ int monitoringSubservice()
                 cout << "Error sending broadcast to participant " << part.hostname << endl;
                 return -1;
             }
-            cout << "monitoringSubservice: broadcasted msg to " << part.hostname << " with size " << sent_bytes << endl;
+            cout << "monitoringSubservice: sent msg to " << part.hostname << " with size " << sent_bytes << endl;
         }
         sleep(6);            // wait for 6 seconds
     } while (!stop_program); // TODO: add condition to stop
