@@ -225,3 +225,11 @@ string getHostname()
         hostname = hostname.substr(0, pos);
     return hostname;
 }
+
+void sendWakeOnLan(string mac)
+{
+    cout << "sendWakeOnLan: sending wake on lan to mac=" << mac << endl;
+    string cmd = "wakeonlan " + mac;
+    string res = exec(cmd.c_str());
+    cout << "sendWakeOnLan: retured " << res << endl;
+}

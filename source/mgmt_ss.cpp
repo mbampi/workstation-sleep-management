@@ -122,7 +122,6 @@ vector<participant> getParticipants()
 void wakeupParticipant(string hostname)
 {
     cout << "wakeupParticipant: waking up " << hostname << endl;
-    participant p = participants_map[hostname];
-    // packet *p = new packet();
-    // sendPacket(p.ip, PARTICIPANT_PORT, "wakeup");
+    auto p = participants_map[hostname];
+    sendWakeOnLan(p.mac);
 }
