@@ -22,7 +22,7 @@ int startManager()
     thread messagesReceiverThread(messagesReceiver);
 
     cout << "startManager: populating fake participants" << endl;
-    populateFakeParticipants(); // DEBUG
+    // populateFakeParticipants(); // DEBUG
 
     // interface subservice
     cout << "startManager: running interfaceSubservice" << endl;
@@ -86,7 +86,6 @@ int interfaceSubservice()
 int monitoringSubservice()
 {
     cout << "Started MonitoringSubservice" << endl;
-    uint16_t seq_num = 0;
     do
     {
         cout << endl;
@@ -94,22 +93,22 @@ int monitoringSubservice()
         packet *p = new packet();
         p->type = MONITORING_REQ;
         p->payload = "monitoring_service_msg";
-        p->seqn = seq_num;
         p->timestamp = getTimestamp();
         p->sender_mac = getMacAddr();
         p->sender_hostname = getHostname();
         p->sender_ip = getIpAddr();
 
         cout << "monitoringSubservice: sending packet " << p->seqn << endl;
-        int sent_bytes = broadcastPacket(p, PARTICIPANT_PORT);
-        if (sent_bytes < 0)
+        for (const participant part : getParticipants())
         {
-            cout << "Error sending broadcast" << endl;
-            return -1;
+            int sent_bytes = sendPacket((char *)part.ip.c_str(), PARTICIPANT_PORT, p);
+            if (sent_bytes < 0)
+            {
+                cout << "Error sending broadcast to participant " << part.hostname << endl;
+                return -1;
+            }
+            cout << "monitoringSubservice: broadcasted msg to " << part.hostname << " with size " << sent_bytes << endl;
         }
-        cout << "monitoringSubservice: broadcasted msg " << seq_num << " to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
-
-        seq_num++;
         sleep(6);            // wait for 6 seconds
     } while (!stop_program); // TODO: add condition to stop
 
@@ -120,7 +119,6 @@ int monitoringSubservice()
 int discoverySubservice()
 {
     cout << "Started DiscoverySubservice" << endl;
-    uint16_t seq_num = 0;
     do
     {
         cout << endl;
@@ -128,22 +126,20 @@ int discoverySubservice()
         packet *p = new packet();
         p->type = DISCOVERY_REQ;
         p->payload = "discovery_service_msg";
-        p->seqn = seq_num;
         p->timestamp = getTimestamp();
         p->sender_mac = getMacAddr();
         p->sender_hostname = getHostname();
         p->sender_ip = getIpAddr();
 
         cout << "discoverySubservice: sending packet " << p->seqn << endl;
+
         int sent_bytes = broadcastPacket(p, PARTICIPANT_PORT);
         if (sent_bytes < 0)
         {
             cout << "Error sending broadcast" << endl;
             return -1;
         }
-        cout << "discoverySubservice: broadcasted msg " << seq_num << " to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
-
-        seq_num++;
+        cout << "discoverySubservice: broadcasted msg to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
         sleep(6); // wait for 6 seconds
     } while (!stop_program);
 
