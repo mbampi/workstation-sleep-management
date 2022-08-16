@@ -23,6 +23,8 @@
 
 using namespace std;
 
+atomic_uint16_t seqn = {0};
+
 int sendPacket(char *ip, int port, packet *p)
 {
     int sockfd, n;
@@ -40,6 +42,7 @@ int sendPacket(char *ip, int port, packet *p)
     serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
     bzero(&(serv_addr.sin_zero), 8);
 
+    p->seqn = seqn++;
     string encoded_msg = encode_packet(p);
     int len = strlen(encoded_msg.c_str());
     cout << "sendPacket=" << encoded_msg << " with len=" << len << endl;
@@ -90,25 +93,6 @@ packet *receivePacket(int on_port)
     return p;
 }
 
-// broadcast UDP message to all local network
-int broadcastMessage(string msg, int port)
-{
-    int fd = socket(AF_INET, SOCK_DGRAM, 0);
-
-    int broadcast = 1;
-    int errors = setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(int));
-
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    memset(addr.sin_zero, '\n', sizeof(addr.sin_zero));
-
-    int len = strlen(msg.c_str());
-    int bytes_sent = sendto(fd, msg.c_str(), len, 0, (struct sockaddr *)&addr, sizeof(addr));
-    return bytes_sent;
-}
-
 int broadcastPacket(packet *msg, int port)
 {
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -125,6 +109,7 @@ int broadcastPacket(packet *msg, int port)
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     memset(addr.sin_zero, '\n', sizeof(addr.sin_zero));
 
+    msg->seqn = seqn++;
     string encoded_msg = encode_packet(msg);
     int len = strlen(encoded_msg.c_str());
     cout << "broadcastPacket=" << encoded_msg << " with len=" << len << endl;
@@ -217,9 +202,17 @@ string exec(const char *cmd)
     return result;
 }
 
+string trim(string_view s)
+{
+    s.remove_prefix(std::min(s.find_first_not_of(" \t\r\v\n"), s.size()));
+    s.remove_suffix(std::min(s.size() - s.find_last_not_of(" \t\r\v\n") - 1, s.size()));
+    return {s.begin(), s.end()};
+}
+
 string getMacAddr()
 {
     string MAC = exec("ifconfig en1 | awk '/ether/{print $2}'");
+    MAC = trim(MAC);
     return MAC;
 }
 
@@ -229,6 +222,7 @@ string getHostname()
     string::size_type pos = hostname.find('.');
     if (pos > 0)
         hostname = hostname.substr(0, pos);
+    hostname = trim(hostname);
     return hostname;
 }
 
@@ -237,6 +231,7 @@ string getIpAddr()
     string ip = exec("ifconfig | grep \"inet \" | grep -Fv 127.0.0.1 | awk '{print $2}'");
     if (ip == "")
         ip = "unknown ip";
+    ip = trim(ip);
     return ip;
 }
 

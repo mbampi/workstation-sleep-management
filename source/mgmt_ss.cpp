@@ -1,10 +1,12 @@
 #include "mgmt_ss.h"
 #include "participant.h"
 
+using namespace std;
+
 map<string, participant> participants_map; // hostname -> participant
 mutex participants_map_mutex;
 
-std::atomic_bool stop_program = {false};
+atomic_bool stop_program = {false};
 
 status getStatus(string hostname)
 {
@@ -58,11 +60,11 @@ void incrementLostPackets(string hostname)
 void printParticipants()
 {
     cout << setw(15) << "\nPARTICIPANTS" << endl;
-    cout << left << setw(20)
+    cout << left << setw(25)
          << "Hostname"
-         << left << setw(20)
+         << left << setw(25)
          << "IP"
-         << left << setw(20)
+         << left << setw(25)
          << "MAC"
          << left << setw(10)
          << "Status"
@@ -70,11 +72,11 @@ void printParticipants()
     for (const participant p : getParticipants())
     {
         cout
-            << left << setw(20)
+            << left << setw(25)
             << p.hostname
-            << left << setw(20)
+            << left << setw(25)
             << p.ip
-            << left << setw(20)
+            << left << setw(25)
             << p.mac
             << left << setw(10)
             << StatusToString(p.state)
@@ -85,6 +87,8 @@ void printParticipants()
 void addParticipant(participant *p)
 {
     cout << "\naddParticipant: adding participant " << p->hostname << endl;
+    cout << "|" << p->mac << "|";
+    cout << "|" << p->ip << "|";
     participants_map_mutex.lock();
     participants_map[p->hostname] = *p;
     participants_map_mutex.unlock();

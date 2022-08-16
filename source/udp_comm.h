@@ -9,11 +9,11 @@
 #define PARTICIPANT_PORT 4001
 #define MANAGER_PORT 4000
 
+extern atomic_uint16_t seqn;
+
 int sendPacket(char *ip, int port, packet *p);
 
 packet *receivePacket(int on_port);
-
-int broadcastMessage(string msg, int port);
 
 int broadcastPacket(packet *msg, int port);
 
