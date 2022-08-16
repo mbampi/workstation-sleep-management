@@ -31,15 +31,6 @@ typedef struct participant
     int lost_packets = 0;
 } participant;
 
-typedef struct participant_res
-{
-    string hostname;
-    string mac;
-} participant_res;
-
-participant *decode_participantpayload(string payload);
-string encode_participantpayload();
-
 int startParticipant();
 void participantExit();
 void participantInterface();

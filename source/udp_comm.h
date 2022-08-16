@@ -11,7 +11,7 @@
 
 int sendPacket(char *ip, int port, packet *p);
 
-packet_res *receivePacket(int on_port);
+packet *receivePacket(int on_port);
 
 int broadcastMessage(string msg, int port);
 
@@ -21,5 +21,8 @@ int receiveBroadcast(int on_port);
 
 string getMacAddr();
 string getHostname();
+string getIpAddr();
+uint16_t getTimestamp();
+void sendWakeOnLan(string mac);
 
 #endif

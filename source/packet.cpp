@@ -15,13 +15,22 @@ using namespace std;
 // encode packet to string
 string encode_packet(packet *p)
 {
-    return to_string(p->type) + "|" + to_string(p->seqn) + "|" + to_string(p->payload.length()) + "|" + to_string(p->timestamp) + "|" + p->payload;
+    string packet_str = "";
+    packet_str += to_string(p->type);
+    packet_str += "|" + to_string(p->seqn);
+    packet_str += "|" + to_string(p->payload.length());
+    packet_str += "|" + to_string(p->timestamp);
+    packet_str += "|" + p->sender_ip;
+    packet_str += "|" + p->sender_hostname;
+    packet_str += "|" + p->sender_mac;
+    packet_str += "|" + p->payload;
+    return packet_str;
 }
 
 // decode packet from string
-packet_res *decode_packet(string buffer, sockaddr_in *sender)
+packet *decode_packet(string buffer, sockaddr_in *sender)
 {
-    packet_res *p = new packet_res();
+    packet *p = new packet();
     char *token = strtok((char *)buffer.c_str(), "|");
     p->type = (packet_type)atoi(token);
     token = strtok(NULL, "|");
@@ -31,18 +40,14 @@ packet_res *decode_packet(string buffer, sockaddr_in *sender)
     token = strtok(NULL, "|");
     p->timestamp = atoi(token);
     token = strtok(NULL, "|");
+    p->sender_ip = token;
+    token = strtok(NULL, "|");
+    p->sender_hostname = token;
+    token = strtok(NULL, "|");
+    p->sender_mac = token;
+    token = strtok(NULL, "|");
     token[p->length] = '\0';
     p->payload = token;
-
-    if (p->type == DISCOVERY_RES)
-    {
-        participant *part = decode_participantpayload(p->payload);
-        p->sender_hostname = part->hostname;
-        p->sender_mac = part->mac;
-    }
-
-    char *ip = inet_ntoa(sender->sin_addr);
-    p->sender_ip = ip;
 
     return p;
 }

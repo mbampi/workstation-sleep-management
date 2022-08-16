@@ -49,7 +49,7 @@ int sendPacket(char *ip, int port, packet *p)
     return n;
 }
 
-packet_res *receivePacket(int on_port)
+packet *receivePacket(int on_port)
 {
     int sockfd, n;
     socklen_t clilen;
@@ -77,7 +77,7 @@ packet_res *receivePacket(int on_port)
 
     cout << "receivePacket: " << buf << endl;
 
-    packet_res *p = decode_packet(buf, &cli_addr);
+    packet *p = decode_packet(buf, &cli_addr);
 
     if (n < 0)
     {
@@ -159,7 +159,7 @@ int receiveBroadcast(int on_port)
         int nrecv = recvfrom(s, buf, sizeof(buf), 0, (sockaddr *)&si_other, &slen);
         cout << "receiveBroadcast: rcvd packet " << buf << " with len=" << nrecv << endl;
 
-        packet_res *rcvd_packet = decode_packet(buf, &si_other);
+        packet *rcvd_packet = decode_packet(buf, &si_other);
         cout << "receiveBroadcast: packet type=" << rcvd_packet->type
              << " | seqn=" << rcvd_packet->seqn
              << " | length=" << rcvd_packet->length
@@ -174,7 +174,10 @@ int receiveBroadcast(int on_port)
             packet *p = new packet();
             p->type = DISCOVERY_RES;
             p->seqn = rcvd_packet->seqn;
-            p->payload = encode_participantpayload();
+            p->payload = "i do exist";
+            p->sender_mac = getMacAddr();
+            p->sender_hostname = getHostname();
+            p->sender_ip = getIpAddr();
 
             char *ip = inet_ntoa(si_other.sin_addr);
             int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
@@ -188,7 +191,10 @@ int receiveBroadcast(int on_port)
             packet *p = new packet();
             p->type = MONITORING_RES;
             p->seqn = rcvd_packet->seqn;
-            p->payload = "notebook_1";
+            p->payload = "i am awake";
+            p->sender_mac = getMacAddr();
+            p->sender_hostname = getHostname();
+            p->sender_ip = getIpAddr();
 
             char *ip = inet_ntoa(si_other.sin_addr);
             int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
@@ -224,6 +230,20 @@ string getHostname()
     if (pos > 0)
         hostname = hostname.substr(0, pos);
     return hostname;
+}
+
+string getIpAddr()
+{
+    string ip = exec("ifconfig | grep \"inet \" | grep -Fv 127.0.0.1 | awk '{print $2}'");
+    if (ip == "")
+        ip = "unknown ip";
+    return ip;
+}
+
+uint16_t getTimestamp()
+{
+    uint16_t timestamp = 1;
+    return timestamp;
 }
 
 void sendWakeOnLan(string mac)

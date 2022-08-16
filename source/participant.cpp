@@ -17,23 +17,6 @@ using namespace std;
 
 char *managerIP;
 
-participant *decode_participantpayload(string payload)
-{
-    participant *p = new participant();
-    char *token = strtok((char *)payload.c_str(), ";");
-    p->hostname = token[0];
-    p->mac = token[1];
-    return p;
-}
-
-string encode_participantpayload()
-{
-    string hostname = getHostname();
-    string mac = getMacAddr();
-    string payload = hostname + ";" + mac + ";";
-    return payload;
-}
-
 string StatusToString(status s)
 {
     switch (s)

@@ -69,7 +69,7 @@ int interfaceSubservice()
         else if (cmd == "WAKEUP")
         {
             string hostname = userInput.substr(userInput.find(" ") + 1);
-            cout << "startManager: waking up participant" << hostname << endl;
+            cout << "startManager: waking up participant " << hostname << endl;
             wakeupParticipant(hostname);
         }
         else
@@ -95,6 +95,10 @@ int monitoringSubservice()
         p->type = MONITORING_REQ;
         p->payload = "monitoring_service_msg";
         p->seqn = seq_num;
+        p->timestamp = getTimestamp();
+        p->sender_mac = getMacAddr();
+        p->sender_hostname = getHostname();
+        p->sender_ip = getIpAddr();
 
         cout << "monitoringSubservice: sending packet " << p->seqn << endl;
         int sent_bytes = broadcastPacket(p, PARTICIPANT_PORT);
@@ -125,6 +129,10 @@ int discoverySubservice()
         p->type = DISCOVERY_REQ;
         p->payload = "discovery_service_msg";
         p->seqn = seq_num;
+        p->timestamp = getTimestamp();
+        p->sender_mac = getMacAddr();
+        p->sender_hostname = getHostname();
+        p->sender_ip = getIpAddr();
 
         cout << "discoverySubservice: sending packet " << p->seqn << endl;
         int sent_bytes = broadcastPacket(p, PARTICIPANT_PORT);
