@@ -31,12 +31,11 @@ string IPToHostname(string ip)
     string hostname;
 
     participants_map_mutex.lock();
-    for (const auto &[h, p] : participants_map)
+
+    for (auto const &p : participants_map)
     {
-        if (p.ip == ip)
-        {
-            hostname = p.hostname;
-        }
+        if (p.second.ip == ip)
+            hostname = p.first;
     }
     participants_map_mutex.unlock();
 
@@ -113,10 +112,8 @@ vector<participant> getParticipants()
 {
     vector<participant> participants;
     participants_map_mutex.lock();
-    for (const auto &[h, p] : participants_map)
-    {
-        participants.push_back(p);
-    }
+    for (auto const &p : participants_map)
+        participants.push_back(p.second);
     participants_map_mutex.unlock();
     return participants;
 }
