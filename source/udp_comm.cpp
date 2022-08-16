@@ -216,17 +216,11 @@ string exec(const char *cmd)
     return result;
 }
 
-string trim(string_view s)
-{
-    s.remove_prefix(std::min(s.find_first_not_of(" \t\r\v\n"), s.size()));
-    s.remove_suffix(std::min(s.size() - s.find_last_not_of(" \t\r\v\n") - 1, s.size()));
-    return {s.begin(), s.end()};
-}
-
 string getMacAddr()
 {
     string MAC = exec("ifconfig en1 | awk '/ether/{print $2}'");
-    MAC = trim(MAC);
+    if (MAC.back() == '\n')
+        MAC.pop_back();
     return MAC;
 }
 
@@ -238,7 +232,9 @@ string getHostname()
         hostname = hostname.substr(0, pos);
     if (hostname.empty())
         hostname = "unknown hostname";
-    hostname = trim(hostname);
+    if (hostname.back() == '\n')
+        hostname.pop_back();
+
     return hostname;
 }
 
@@ -247,7 +243,8 @@ string getIpAddr()
     string ip = exec("ifconfig | grep \"inet \" | grep -Fv 127.0.0.1 | awk '{print $2}'");
     if (ip == "")
         ip = "unknown ip";
-    ip = trim(ip);
+    if (ip.back() == '\n')
+        ip.pop_back();
     return ip;
 }
 
