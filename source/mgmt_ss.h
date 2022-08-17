@@ -27,5 +27,6 @@ void removeParticipant(string hostname);
 void changeParticipantStatus(string hostname, status s);
 vector<participant> getParticipants();
 void wakeupParticipant(string hostname);
+bool isParticipant(string hostname);
 
 #endif

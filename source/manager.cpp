@@ -8,7 +8,7 @@
 #include "participant.h"
 #include "manager.h"
 #include "mgmt_ss.h"
-#define PACKETS_LIMIT 10
+#define PACKETS_LIMIT 2
 
 int startManager()
 {
@@ -54,7 +54,7 @@ int interfaceSubservice()
     while ((!stop_program) && (cmd != "EXIT") && (getline(cin, userInput)))
     {
         cmd = userInput.substr(0, userInput.find(" "));
-        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+        transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 
         if (cmd == "EXIT")
         {
@@ -115,6 +115,7 @@ int monitoringSubservice()
 
         if (debug_mode)
             cout << "monitoringSubservice: sending packet " << p->seqn << endl;
+
         for (const participant part : getParticipants())
         {
             int sent_bytes = sendPacket((char *)part.ip.c_str(), PARTICIPANT_PORT, p);
@@ -126,6 +127,7 @@ int monitoringSubservice()
             if (debug_mode)
                 cout << "monitoringSubservice: sent msg to " << part.hostname << " with size " << sent_bytes << endl;
         }
+
         sleep(6);            // wait for 6 seconds
     } while (!stop_program); // TODO: add condition to stop
 
@@ -203,22 +205,33 @@ int messagesReceiver()
             if (debug_mode)
                 cout << "Received DISCOVERY_RES" << endl;
 
-            participant *p = new participant();
-            p->ip = response->sender_ip;
-            p->mac = response->sender_mac;
-            p->hostname = response->sender_hostname;
-            p->state = awake;
+            if (!(isParticipant(response->sender_hostname)) && response->sender_hostname != "")
+            {
+                participant *p = new participant();
+                p->ip = response->sender_ip;
+                p->mac = response->sender_mac;
+                p->hostname = response->sender_hostname;
+                p->state = awake;
 
-            addParticipant(p);
+                addParticipant(p);
+            }
+
             break;
         }
         case MONITORING_RES:
         {
             if (debug_mode)
                 cout << "Received MONITORING_RES" << endl;
-            zeroLostPackets(response->payload); // hostname está em payload
-            if (getStatus(response->payload) != awake)
-                changeParticipantStatus(response->payload, awake);
+
+            if (isParticipant(response->sender_hostname))
+            {
+                zeroLostPackets(response->sender_hostname);
+                if (getStatus(response->sender_hostname) != awake)
+                {
+                    changeParticipantStatus(response->sender_hostname, awake);
+                }
+            }
+
             break;
         }
         case EXIT_REQ:

@@ -11,11 +11,13 @@
 #include <string.h>
 #include <iostream>
 #include <cassert>
+#include <cstdio>
 
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <array>
+#include <atomic>
 
 #include "udp_comm.h"
 #include "mgmt_ss.h"
@@ -23,7 +25,7 @@
 
 using namespace std;
 
-atomic_uint16_t seqn = {0};
+atomic<uint16_t> seqn = {0};
 
 int sendPacket(char *ip, int port, packet *p)
 {
@@ -208,20 +210,31 @@ string exec(const char *cmd)
 {
     array<char, 128> buffer;
     string result;
-    unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
+    shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
+
     if (!pipe)
         throw runtime_error("popen() failed!");
-    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
-        result += buffer.data();
+    while (!feof(pipe.get()))
+    {
+        if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
+            result += buffer.data();
+    }
+
     return result;
 }
 
 string getMacAddr()
 {
-    string MAC = exec("ifconfig en1 | awk '/ether/{print $2}'");
-    if (MAC.back() == '\n')
-        MAC.pop_back();
-    return MAC;
+    string macAddr = "";
+#if defined(__APPLE__)
+    macAddr = exec("ifconfig en1 | awk '/ether/{print $2}'");
+    if (macAddr.back() == '\n')
+        macAddr.pop_back();
+#else // LINUX
+    macAddr = exec("cat /sys/class/net/*/address");
+    macAddr.erase(macAddr.find('\n'), macAddr.size() - macAddr.find('\n'));
+#endif
+    return macAddr;
 }
 
 string getHostname()

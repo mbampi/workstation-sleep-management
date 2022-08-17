@@ -21,8 +21,6 @@ int main(int argc, char *argv[])
 {
     cout << ("Workstation Sleep Manager\n") << endl;
 
-    debug_mode = false;
-
     bool isManager = false;
     if (argc > 1)
         isManager = (strcmp(argv[1], "manager") == 0);

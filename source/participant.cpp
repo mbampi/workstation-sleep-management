@@ -54,10 +54,10 @@ void participantInterface()
     if (debug_mode)
         cout << "interfaceSubservice" << endl;
     cout << ">> ";
-    while ((!stop_program) && (cmd != "EXIT") && (std::getline(std::cin, userInput)))
+    while ((!stop_program) && (cmd != "EXIT") && (getline(cin, userInput)))
     {
         cmd = userInput.substr(0, userInput.find(" "));
-        std::transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+        transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
         cout << ">> ";
     }
     participantExit();

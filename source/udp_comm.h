@@ -5,11 +5,12 @@
 
 #include <string.h>
 #include "packet.h"
+#include <atomic>
 
 #define PARTICIPANT_PORT 4001
 #define MANAGER_PORT 4000
 
-extern atomic_uint16_t seqn;
+extern atomic<uint16_t> seqn;
 
 int sendPacket(char *ip, int port, packet *p);
 

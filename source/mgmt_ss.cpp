@@ -7,7 +7,7 @@ map<string, participant> participants_map; // hostname -> participant
 mutex participants_map_mutex;
 
 atomic_bool stop_program = {false};
-atomic_bool debug_mode = {false};
+atomic_bool debug_mode = {true};
 
 status getStatus(string hostname)
 {
@@ -45,9 +45,12 @@ string IPToHostname(string ip)
 
 void zeroLostPackets(string hostname)
 {
-    participants_map_mutex.lock();
-    participants_map[hostname].lost_packets = 0;
-    participants_map_mutex.unlock();
+    if (isParticipant(hostname))
+    {
+        participants_map_mutex.lock();
+        participants_map[hostname].lost_packets = 0;
+        participants_map_mutex.unlock();
+    }
 }
 
 void incrementLostPackets(string hostname)
@@ -115,7 +118,9 @@ vector<participant> getParticipants()
     vector<participant> participants;
     participants_map_mutex.lock();
     for (auto const &p : participants_map)
+    {
         participants.push_back(p.second);
+    }
     participants_map_mutex.unlock();
     return participants;
 }
@@ -126,4 +131,18 @@ void wakeupParticipant(string hostname)
         cout << "wakeupParticipant: waking up " << hostname << endl;
     auto p = participants_map[hostname];
     sendWakeOnLan(p.mac);
+}
+
+bool isParticipant(string hostname)
+{
+    bool is_participant = false;
+    vector<participant> p_list = getParticipants();
+
+    for (size_t i = 0; i < p_list.size(); i++)
+    {
+        if (p_list[i].hostname == hostname)
+            is_participant = true;
+    }
+
+    return is_participant;
 }
