@@ -8,7 +8,8 @@
 #include "participant.h"
 #include "manager.h"
 #include "mgmt_ss.h"
-#define PACKETS_LIMIT 2
+#define PACKETS_LIMIT 1
+#define SLEEP_TIME 1
 
 int startManager()
 {
@@ -21,8 +22,12 @@ int startManager()
     thread monitoringThread(monitoringSubservice);
 
     if (debug_mode)
-        cout << "startManager: creating messagesReceiver thread" << endl;
-    thread messagesReceiverThread(messagesReceiver);
+        cout << "startManager: creating messagesReceiverOriginal thread" << endl;
+    thread messagesReceiverOriginalThread(messagesReceiverOriginal);
+
+    if (debug_mode)
+        cout << "startManager: creating messagesReceiverMonitoring thread" << endl;
+    thread messagesReceiverMonitoringThread(messagesReceiverMonitoring);
 
     if (debug_mode)
         cout << "startManager: populating fake participants" << endl;
@@ -37,7 +42,8 @@ int startManager()
 
     discoveryThread.join();
     monitoringThread.join();
-    messagesReceiverThread.join();
+    messagesReceiverOriginalThread.join();
+    messagesReceiverMonitoringThread.join();
 
     if (debug_mode)
         cout << ("startManager: Manager stopped") << endl;
@@ -118,7 +124,8 @@ int monitoringSubservice()
 
         for (const participant part : getParticipants())
         {
-            int sent_bytes = sendPacket((char *)part.ip.c_str(), PARTICIPANT_PORT, p);
+            //int sent_bytes = sendPacket((char *)part.ip.c_str(), PARTICIPANT_MONITORING_PORT, p);
+            int sent_bytes = broadcastPacket(p,PARTICIPANT_MONITORING_PORT);
             if (sent_bytes < 0)
             {
                 cout << "Error sending broadcast to participant " << part.hostname << endl;
@@ -128,7 +135,7 @@ int monitoringSubservice()
                 cout << "monitoringSubservice: sent msg to " << part.hostname << " with size " << sent_bytes << endl;
         }
 
-        sleep(6);            // wait for 6 seconds
+        sleep(SLEEP_TIME);            // wait for 6 seconds
     } while (!stop_program); // TODO: add condition to stop
 
     if (debug_mode)
@@ -156,25 +163,25 @@ int discoverySubservice()
         if (debug_mode)
             cout << "discoverySubservice: sending packet " << p->seqn << endl;
 
-        int sent_bytes = broadcastPacket(p, PARTICIPANT_PORT);
+        int sent_bytes = broadcastPacket(p, PARTICIPANT_DISCOVERY_PORT);
         if (sent_bytes < 0)
         {
             cout << "Error sending broadcast" << endl;
             return -1;
         }
         if (debug_mode)
-            cout << "discoverySubservice: broadcasted msg to port " << PARTICIPANT_PORT << " with size " << sent_bytes << endl;
-        sleep(6); // wait for 6 seconds
+            cout << "discoverySubservice: broadcasted msg to port " << PARTICIPANT_DISCOVERY_PORT << " with size " << sent_bytes << endl;
+        sleep(SLEEP_TIME); // wait for 6 seconds
     } while (!stop_program);
     if (debug_mode)
         cout << "ending discovery" << endl;
     return 0;
 }
 
-int messagesReceiver()
+int messagesReceiverOriginal()
 {
     if (debug_mode)
-        cout << "Started MessagesReceiver" << endl;
+        cout << "Started MessagesReceiverOriginal" << endl;
     do
     {
         if (debug_mode)
@@ -182,20 +189,14 @@ int messagesReceiver()
 
         // receive response
         if (debug_mode)
-            cout << "messagesReceiver: Waiting for message on port " << MANAGER_PORT << endl;
-        auto response = receivePacket(MANAGER_PORT);
+            cout << "messagesReceiverOriginal: Waiting for message on port " << MANAGER_DISCOVERY_PORT << endl;
+        auto response = receivePacket(MANAGER_DISCOVERY_PORT);
         if (response->sender_hostname == "NULL")
         {
-            string hn = IPToHostname(response->sender_ip);
-            incrementLostPackets(hn);
-            if (compareLostPackets(hn, PACKETS_LIMIT))
-            {
-                if (getStatus(hn) != asleep)
-                    changeParticipantStatus(hn, asleep);
-            }
+            cout << "Erro recebendo o pacote em messagesReceiverOriginal" << endl;
         }
         if (debug_mode)
-            cout << "messagesReceiver: packet response. type=" << response->type << " | seqn=" << response->seqn
+            cout << "messagesReceiverOriginal: packet response. type=" << response->type << " | seqn=" << response->seqn
                  << " | length=" << response->length << " | payload=" << response->payload << endl;
 
         switch (response->type)
@@ -218,6 +219,53 @@ int messagesReceiver()
 
             break;
         }
+        case EXIT_REQ:
+        {
+            if (debug_mode)
+                cout << "Received EXIT_REQ" << endl;
+            removeParticipant(response->sender_hostname);
+            break;
+        }
+        default:
+        {
+            if (debug_mode)
+                cout << "messagesReceiverOriginal: Received UNKNOWN packet" << endl;
+            break;
+        }
+        }
+    } while (!stop_program);
+    return 0;
+}
+
+int messagesReceiverMonitoring()
+{
+    if (debug_mode)
+        cout << "Started MessagesReceiverMonitoring" << endl;
+    do
+    {
+        if (debug_mode)
+            cout << endl;
+
+        // receive response
+        if (debug_mode)
+            cout << "messagesReceiverMonitoring: Waiting for message on port " << MANAGER_MONITORING_PORT << endl;
+        auto response = receivePacket(MANAGER_MONITORING_PORT);
+        if (response->flag_monitoring == true)
+        {
+            string hn = IPToHostname(response->sender_ip);
+            incrementLostPackets(hn);
+            if (compareLostPackets(hn, PACKETS_LIMIT))
+            {
+                if (getStatus(hn) != asleep)
+                    changeParticipantStatus(hn, asleep);
+            }
+        }
+        if (debug_mode)
+            cout << "messagesReceiver: packet response. type=" << response->type << " | seqn=" << response->seqn
+                 << " | length=" << response->length << " | payload=" << response->payload << endl;
+
+        switch (response->type)
+        {
         case MONITORING_RES:
         {
             if (debug_mode)
@@ -234,17 +282,10 @@ int messagesReceiver()
 
             break;
         }
-        case EXIT_REQ:
-        {
-            if (debug_mode)
-                cout << "Received EXIT_REQ" << endl;
-            removeParticipant(response->sender_hostname);
-            break;
-        }
         default:
         {
             if (debug_mode)
-                cout << "messagesReceiver: Received UNKNOWN packet" << endl;
+                cout << "messagesReceiverMonitoring: Received UNKNOWN packet" << endl;
             break;
         }
         }

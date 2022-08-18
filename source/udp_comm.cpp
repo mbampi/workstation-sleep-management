@@ -64,7 +64,9 @@ packet *receivePacket(int on_port)
     int true_int = 1;
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+    {
         printf("ERROR opening socket");
+    }
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(on_port);
@@ -91,6 +93,7 @@ packet *receivePacket(int on_port)
         printf("ERROR on recvfrom");
         p->sender_hostname = "NULL";
         p->sender_ip = inet_ntoa((&cli_addr)->sin_addr);
+        p->flag_monitoring = true;
     }
 
     if (debug_mode)
@@ -177,10 +180,10 @@ int receiveBroadcast(int on_port)
             p->sender_ip = getIpAddr();
 
             char *ip = inet_ntoa(si_other.sin_addr);
-            int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
+            int sent_bytes = sendPacket(ip, MANAGER_DISCOVERY_PORT, p);
             if (debug_mode)
                 cout << "receiveBroadcast: sent DISCOVERY_RES with " << sent_bytes << " bytes"
-                     << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+                     << " to ip:port=" << ip << ":" << MANAGER_DISCOVERY_PORT << endl;
         }
         if (rcvd_packet->type == MONITORING_REQ)
         {
@@ -197,10 +200,10 @@ int receiveBroadcast(int on_port)
             p->sender_ip = getIpAddr();
 
             char *ip = inet_ntoa(si_other.sin_addr);
-            int sent_bytes = sendPacket(ip, MANAGER_PORT, p);
+            int sent_bytes = sendPacket(ip, MANAGER_MONITORING_PORT, p);
             if (debug_mode)
                 cout << "receivePacket: sent MONITORING_RES with " << sent_bytes << " bytes"
-                     << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+                     << " to ip:port=" << ip << ":" << MANAGER_MONITORING_PORT << endl;
         }
     }
     return 0;

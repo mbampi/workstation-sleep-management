@@ -7,7 +7,7 @@ map<string, participant> participants_map; // hostname -> participant
 mutex participants_map_mutex;
 
 atomic_bool stop_program = {false};
-atomic_bool debug_mode = {true};
+atomic_bool debug_mode = {false};
 
 status getStatus(string hostname)
 {

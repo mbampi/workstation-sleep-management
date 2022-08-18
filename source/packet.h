@@ -32,6 +32,7 @@ typedef struct
     string sender_hostname; // Hostname do sender
     string sender_mac;      // MAC do sender
     string payload;         // Dados da mensagem
+    bool flag_monitoring = false; // Flag para tentar resolver monitoring
 } packet;
 
 packet *decode_packet(string buffer, sockaddr_in *sender);

@@ -35,5 +35,6 @@ int startParticipant();
 void participantExit();
 void participantInterface();
 int broadcastSubservice();
+int singleSubservice();
 
 #endif

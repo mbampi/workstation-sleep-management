@@ -7,8 +7,10 @@
 #include "packet.h"
 #include <atomic>
 
-#define PARTICIPANT_PORT 4001
-#define MANAGER_PORT 4000
+#define MANAGER_DISCOVERY_PORT 4000
+#define PARTICIPANT_DISCOVERY_PORT 4001
+#define MANAGER_MONITORING_PORT  5000
+#define PARTICIPANT_MONITORING_PORT 5001
 
 extern atomic<uint16_t> seqn;
 

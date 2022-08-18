@@ -36,10 +36,12 @@ int startParticipant()
         cout << "Started Participant" << endl;
 
     thread broadcastReceiverThread(broadcastSubservice);
+    thread singleReceiverThread(singleSubservice);
 
     participantInterface();
 
     broadcastReceiverThread.join();
+    singleReceiverThread.join();
 
     if (debug_mode)
         cout << "ending participant" << endl;
@@ -53,7 +55,8 @@ void participantInterface()
     string cmd = "";
     if (debug_mode)
         cout << "interfaceSubservice" << endl;
-    cout << ">> ";
+    cout << ">> ";    
+
     while ((!stop_program) && (cmd != "EXIT") && (getline(cin, userInput)))
     {
         cmd = userInput.substr(0, userInput.find(" "));
@@ -75,7 +78,7 @@ void participantExit()
     p->sender_mac = getMacAddr();
     p->sender_hostname = getHostname();
     p->sender_ip = getIpAddr();
-    sendPacket(managerIP, MANAGER_PORT, p);
+    sendPacket(managerIP, MANAGER_DISCOVERY_PORT, p);
 
     stop_program = true;
     exit(0);
@@ -83,6 +86,14 @@ void participantExit()
 
 int broadcastSubservice()
 {
-    int n = receiveBroadcast(PARTICIPANT_PORT);
+    int n = receiveBroadcast(PARTICIPANT_DISCOVERY_PORT);
+    return 0;
+}
+
+int singleSubservice() //deixei no receive broadcast e não no receive packet por enquanto para teste
+{
+    //packet *p = receivePacket(PARTICIPANT_MONITORING_PORT);
+    int n = receiveBroadcast(PARTICIPANT_MONITORING_PORT);
+
     return 0;
 }

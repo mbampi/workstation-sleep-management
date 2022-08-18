@@ -6,7 +6,8 @@ int startManager();
 int monitoringSubservice();
 int discoverySubservice();
 int interfaceSubservice();
-int messagesReceiver();
+int messagesReceiverOriginal();
+int messagesReceiverMonitoring();
 
 void managerExit();
 
