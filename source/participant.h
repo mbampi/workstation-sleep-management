@@ -6,13 +6,8 @@
 #include <stdlib.h>
 #include <cstdlib>
 #include <iostream>
-#include <string.h>
-
-#include "udp_comm.h"
 
 using namespace std;
-
-extern char *managerIP;
 
 enum status
 {
@@ -20,7 +15,7 @@ enum status
     asleep = 1
 };
 
-string StatusToString(status s);
+string status_to_string(status s);
 
 typedef struct participant
 {
@@ -28,13 +23,6 @@ typedef struct participant
     string ip;
     string mac;
     status state;
-    int lost_packets = 0;
 } participant;
 
-int startParticipant();
-void participantExit();
-void participantInterface();
-int broadcastSubservice();
-int singleSubservice();
-
-#endif
+#endif // PARTICIPANT_H

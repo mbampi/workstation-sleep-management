@@ -2,6 +2,7 @@
 
 #ifndef PACKET_H
 #define PACKET_H
+
 #include <string.h>
 #include <stdio.h>
 #include <netinet/in.h>
@@ -24,18 +25,15 @@ enum packet_type
 
 typedef struct
 {
-    uint16_t type;          // Tipo do pacote (p.ex. DATA | CMD)
-    uint16_t seqn;          // Número de sequência
-    uint16_t length;        // Comprimento do payload
+    uint16_t type;          // Tipo do pacote (p.ex. DISCOVERY | MONTIORING | EXIT)
+    uint16_t seqn;          // Número de sequência do pacote
     uint16_t timestamp;     // Timestamp do dado
     string sender_ip;       // IP do sender
     string sender_hostname; // Hostname do sender
     string sender_mac;      // MAC do sender
-    string payload;         // Dados da mensagem
-    bool flag_monitoring = false; // Flag para tentar resolver monitoring
 } packet;
 
-packet *decode_packet(string buffer, sockaddr_in *sender);
+packet *decode_packet(string buffer);
 string encode_packet(packet *p);
 
-#endif
+#endif // PACKET_H

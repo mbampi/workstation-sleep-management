@@ -3,47 +3,30 @@
 #include <iostream>
 #include <csignal>
 
-#include "packet.h"
-#include "udp_comm.h"
-#include "mgmt_ss.h"
-#include "participant.h"
+#include "machine.h"
 #include "manager.h"
 
 using namespace std;
-
-void signalHandler(int signum)
-{
-    cout << "Signal " << signum << " received." << endl;
-    stop_program = true;
-}
 
 int main(int argc, char *argv[])
 {
     cout << ("Workstation Sleep Manager\n") << endl;
 
-    bool isManager = false;
+    bool is_manager = false;
     if (argc > 1)
-        isManager = (strcmp(argv[1], "manager") == 0);
+        is_manager = (strcmp(argv[1], "manager") == 0);
 
-    if (debug_mode)
-        cout << ("Started") << endl;
-
-    signal(SIGINT, signalHandler);  // Ctrl + C
-    signal(SIGTERM, signalHandler); // kill
-    signal(SIGABRT, signalHandler); // abort
-
-    if (isManager)
+    // instancia o objeto machine
+    if (is_manager)
     {
-        if (debug_mode)
-            cout << ("Manager mode") << endl;
-        startManager();
-        return 0;
+        cout << ("Starting as manager\n") << endl;
+        Manager *m = new Manager();
+        m->Start();
     }
     else
     {
-        if (debug_mode)
-            cout << ("Participant mode") << endl;
-        startParticipant();
-        return 0;
+        cout << ("Starting as workstation\n") << endl;
+        Machine *m = new Machine();
+        m->Start();
     }
 }
