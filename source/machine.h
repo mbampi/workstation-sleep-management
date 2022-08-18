@@ -22,6 +22,10 @@
 #define MANAGER_PORT 4000
 #define PARTICIPANT_PORT 4001
 
+#define MONITORING_INTERVAL 5
+#define DISCOVERY_INTERVAL 10
+#define ROUNDS_WITHOUT_ACTIVITY_THRESHOLD 1
+
 using namespace std;
 
 class Machine

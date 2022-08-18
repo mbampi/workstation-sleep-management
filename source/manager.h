@@ -33,6 +33,8 @@ protected:
     void removeParticipant(string hostname);
     void changeParticipantStatus(string hostname, status s);
     vector<participant> getParticipants();
+    void zero_rounds_without_activity(string hostname);
+    void inc_rounds_without_activity(string hostname);
 
     void discovery();
     void monitoring();

@@ -136,9 +136,6 @@ void Machine::message_receiver(int from_port)
 
         packet *rcvd_packet = decode_packet(buf);
 
-        char *ip = inet_ntoa(si_other.sin_addr);
-        cout << "IP from connection=" << ip << " | ip from msg=" << rcvd_packet->sender_ip << endl;
-
         this->process_message(rcvd_packet);
     }
 }

@@ -23,6 +23,7 @@ typedef struct participant
     string ip;
     string mac;
     status state;
+    int rounds_without_activity;
 } participant;
 
 #endif // PARTICIPANT_H

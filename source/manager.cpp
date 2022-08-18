@@ -26,11 +26,14 @@ void Manager::monitoring()
 
         for (auto &p : this->getParticipants())
         {
+            if (p.rounds_without_activity >= ROUNDS_WITHOUT_ACTIVITY_THRESHOLD)
+                this->changeParticipantStatus(p.hostname, asleep);
+            this->inc_rounds_without_activity(p.hostname);
             int sent_bytes = this->sendPacket(MONITORING_REQ, p.ip, PARTICIPANT_PORT, false);
             cout << "manager: montitoring: sent_bytes=" << sent_bytes << endl;
         }
 
-        sleep(8);
+        sleep(MONITORING_INTERVAL);
     } while (true);
 }
 
@@ -40,7 +43,8 @@ void Manager::discovery()
     {
         cout << "manager: discovery: sending req" << endl;
         this->sendPacket(DISCOVERY_REQ, "", PARTICIPANT_PORT, true);
-        sleep(10);
+
+        sleep(DISCOVERY_INTERVAL);
     } while (true);
 }
 
@@ -59,7 +63,7 @@ void Manager::process_message(packet *rcvd_packet)
         p->mac = rcvd_packet->sender_mac;
         p->hostname = rcvd_packet->sender_hostname;
         p->state = awake;
-
+        p->rounds_without_activity = 0;
         this->addParticipant(p);
 
         break;
@@ -68,7 +72,8 @@ void Manager::process_message(packet *rcvd_packet)
     {
         if (debug_mode)
             cout << "process_message: Received MONITORING_RES" << endl;
-
+        zero_rounds_without_activity(rcvd_packet->sender_hostname);
+        changeParticipantStatus(rcvd_packet->sender_hostname, awake);
         break;
     }
     case EXIT_REQ:
@@ -150,6 +155,20 @@ void Manager::changeParticipantStatus(string hostname, status s)
     participants_map[hostname].state = s;
     participants_map_mutex.unlock();
     printParticipants();
+}
+
+void Manager::inc_rounds_without_activity(string hostname)
+{
+    participants_map_mutex.lock();
+    participants_map[hostname].rounds_without_activity++;
+    participants_map_mutex.unlock();
+}
+
+void Manager::zero_rounds_without_activity(string hostname)
+{
+    participants_map_mutex.lock();
+    participants_map[hostname].rounds_without_activity = 0;
+    participants_map_mutex.unlock();
 }
 
 void Manager::wakeupParticipant(string hostname)

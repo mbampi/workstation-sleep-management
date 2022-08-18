@@ -16,7 +16,6 @@ int main(int argc, char *argv[])
     if (argc > 1)
         is_manager = (strcmp(argv[1], "manager") == 0);
 
-    // instancia o objeto machine
     if (is_manager)
     {
         cout << ("Starting as manager\n") << endl;
