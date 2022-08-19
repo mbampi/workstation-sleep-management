@@ -29,11 +29,42 @@ Machine::Machine(bool is_manager)
     this->hostname = get_hostname();
     this->ip = get_ip();
     this->mac = get_mac();
+    this->running = true;
 }
 
 void Machine::Start()
 {
-    this->message_receiver(PARTICIPANT_PORT);
+    thread message_receiver_thread([this]
+                                   { message_receiver(PARTICIPANT_PORT); });
+    this->interface();
+    message_receiver_thread.join();
+}
+
+void Machine::interface()
+{
+    string input;
+    while (getline(cin, input))
+    {
+        string cmd = input.substr(0, input.find(" "));
+        transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+
+        if (cmd == "EXIT")
+        {
+            cout << "Exiting..." << endl;
+            this->running = false;
+            break;
+        }
+        else if (cmd == "DEBUG")
+        {
+            this->debug_mode = !this->debug_mode;
+            cout << "Debug mode: " << (this->debug_mode ? "on" : "off") << endl;
+        }
+        else
+        {
+            cout << "Invalid command." << endl;
+        }
+    };
+    this->send_exit();
 }
 
 packet *Machine::new_packet(packet_type type)
@@ -121,7 +152,7 @@ void Machine::message_receiver(int from_port)
 
     assert((::bind(sock_fd, (sockaddr *)&si_me, sizeof(sockaddr))) != -1);
 
-    while (true)
+    while (this->running)
     {
         if (debug_mode)
             cout << endl;
@@ -214,4 +245,11 @@ int Machine::sendPacket(packet_type type, string to_ip, int to_port, bool broadc
     int sent_bytes = sendto(sockfd, encoded_packet.c_str(), len, 0, (const struct sockaddr *)&dst, sizeof(dst));
     ::close(sockfd);
     return sent_bytes;
+}
+
+void Machine::send_exit()
+{
+    if (debug_mode)
+        cout << "send_exit: sending EXIT packet to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+    sendPacket(EXIT_REQ, this->manager_ip, MANAGER_PORT, false);
 }

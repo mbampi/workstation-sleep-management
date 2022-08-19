@@ -39,6 +39,7 @@ protected:
     void discovery();
     void monitoring();
     void process_message(packet *rcvd_packet) override;
+    void interface() override;
 
     void sendWakeOnLan(string mac);
     void wakeupParticipant(string hostname);

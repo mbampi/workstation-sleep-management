@@ -12,17 +12,57 @@ void Manager::Start()
                                    { this->message_receiver(MANAGER_PORT); });
     thread discovery_thread([this]
                             { this->discovery(); });
-    this->monitoring();
+    thread monitoring_thread([this]
+                             { this->monitoring(); });
+
+    this->interface();
 
     discovery_thread.join();
     message_receiver_thread.join();
+    monitoring_thread.join();
+}
+
+void Manager::interface()
+{
+    string input;
+    while (getline(cin, input))
+    {
+        string cmd = input.substr(0, input.find(" "));
+        transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+
+        if (cmd == "EXIT")
+        {
+            cout << "Exiting..." << endl;
+            this->running = false;
+            break;
+        }
+        else if (cmd == "DEBUG")
+        {
+            this->debug_mode = !this->debug_mode;
+            cout << "Debug mode: " << (this->debug_mode ? "on" : "off") << endl;
+        }
+        else if (cmd == "PRINT")
+        {
+            this->printParticipants();
+        }
+        else if (cmd == "WAKEUP")
+        {
+            string hostname = input.substr(input.find(" ") + 1);
+            this->wakeupParticipant(hostname);
+        }
+        else
+        {
+            cout << "Invalid command." << endl;
+        }
+    };
 }
 
 void Manager::monitoring()
 {
     do
     {
-        cout << "manager: monitoring: sending req" << endl;
+        if (debug_mode)
+            cout << "manager: monitoring: sending req" << endl;
 
         for (auto &p : this->getParticipants())
         {
@@ -30,27 +70,30 @@ void Manager::monitoring()
                 this->changeParticipantStatus(p.hostname, asleep);
             this->inc_rounds_without_activity(p.hostname);
             int sent_bytes = this->sendPacket(MONITORING_REQ, p.ip, PARTICIPANT_PORT, false);
-            cout << "manager: montitoring: sent_bytes=" << sent_bytes << endl;
+            if (debug_mode)
+                cout << "manager: monitoring: sent_bytes=" << sent_bytes << endl;
         }
 
         sleep(MONITORING_INTERVAL);
-    } while (true);
+    } while (this->running);
 }
 
 void Manager::discovery()
 {
     do
     {
-        cout << "manager: discovery: sending req" << endl;
+        if (debug_mode)
+            cout << "manager: discovery: sending req" << endl;
         this->sendPacket(DISCOVERY_REQ, "", PARTICIPANT_PORT, true);
 
         sleep(DISCOVERY_INTERVAL);
-    } while (true);
+    } while (this->running);
 }
 
 void Manager::process_message(packet *rcvd_packet)
 {
-    cout << "manager: process_message: received packet" << endl;
+    if (debug_mode)
+        cout << "manager: process_message: received packet" << endl;
     switch (rcvd_packet->type)
     {
     case DISCOVERY_RES:

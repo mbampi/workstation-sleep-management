@@ -41,7 +41,7 @@ protected:
     string hostname;
     bool is_manager;
     atomic<uint16_t> seqn;
-
+    atomic<bool> running;
     bool debug_mode;
 
     packet *new_packet(packet_type type);
@@ -53,10 +53,13 @@ protected:
 
     void message_receiver(int from_port);
     virtual void process_message(packet *rcvd_packet);
+    virtual void interface();
 
-protected:
-    string manager_ip;
     int sendPacket(packet_type type, string to_ip, int to_port, bool broadcast);
+
+private: // participant functions
+    string manager_ip;
+    void send_exit();
 };
 
 #endif // MACHINE_H
