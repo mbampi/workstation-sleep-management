@@ -13,6 +13,7 @@
 #include <iomanip>  // to use setw
 #include <map>
 #include <vector>
+#include <mutex>
 
 #include "machine.h"
 #include "datatypes.h"

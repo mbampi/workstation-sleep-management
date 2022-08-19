@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <iostream>
 #include <array>
+#include <atomic>
+#include <algorithm>
 
 #include <sys/types.h>
 #include <sys/socket.h>
