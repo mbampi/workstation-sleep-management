@@ -1,15 +1,87 @@
 
 #include "participant.h"
 
-string status_to_string(status s)
+void Participant::Start()
 {
-    switch (s)
+    thread message_receiver_thread([this]
+                                   { message_receiver(PARTICIPANT_PORT); });
+    this->interface();
+    message_receiver_thread.join();
+}
+
+void Participant::interface()
+{
+    string input;
+    while (getline(cin, input))
     {
-    case awake:
-        return "awake";
-    case asleep:
-        return "asleep";
-    default:
-        return "unknown";
+        string cmd = input.substr(0, input.find(" "));
+        transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+
+        if (cmd == "EXIT")
+        {
+            cout << "Exiting..." << endl;
+            this->running = false;
+            break;
+        }
+        else if (cmd == "DEBUG")
+        {
+            this->debug_mode = !this->debug_mode;
+            cout << "Debug mode: " << (this->debug_mode ? "on" : "off") << endl;
+        }
+        else
+        {
+            cout << "Invalid command." << endl;
+        }
+    };
+    this->send_exit();
+}
+
+void Participant::process_message(packet *rcvd_packet)
+{
+    switch (rcvd_packet->type)
+    {
+    case DISCOVERY_REQ:
+    {
+        this->manager_ip = ip;
+
+        if (debug_mode)
+            cout << "process_message: received DISCOVERY_REQ packet." << endl;
+
+        int sent_bytes = sendPacket(DISCOVERY_RES, this->manager_ip, MANAGER_PORT, false);
+        if (sent_bytes < 0)
+            cout << "Error: sendPacket failed." << endl;
+
+        if (debug_mode)
+            cout << "process_message: sent DISCOVERY_RES with " << sent_bytes << " bytes"
+                 << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+        break;
     }
+    case MONITORING_REQ:
+    {
+        if (debug_mode)
+            cout << "process_message: received MONITORING_REQ packet." << endl;
+
+        int sent_bytes = sendPacket(MONITORING_RES, this->manager_ip, MANAGER_PORT, false);
+        if (sent_bytes < 0)
+            printf("ERROR sendto");
+
+        if (debug_mode)
+            cout << "process_message: sent MONITORING_RES with " << sent_bytes << " bytes"
+                 << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+        break;
+    }
+    default:
+    {
+        if (debug_mode)
+            cout << "process_message: Received UNKNOWN packet" << endl;
+        break;
+    }
+    }
+}
+
+void Participant::send_exit()
+{
+    if (debug_mode)
+        cout << "send_exit: sending EXIT packet to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+    sendPacket(EXIT_REQ, this->manager_ip, MANAGER_PORT, false);
 }

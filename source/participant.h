@@ -7,23 +7,21 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "machine.h"
+#include "datatypes.h"
+
 using namespace std;
 
-enum status
+class Participant : public Machine
 {
-    awake = 0,
-    asleep = 1
+public:
+    void Start();
+
+protected:
+    string manager_ip;
+    void send_exit();
+    void process_message(packet *rcvd_packet) override;
+    void interface() override;
 };
-
-string status_to_string(status s);
-
-typedef struct participant
-{
-    string hostname;
-    string ip;
-    string mac;
-    status state;
-    int rounds_without_activity;
-} participant;
 
 #endif // PARTICIPANT_H

@@ -1,7 +1,5 @@
-
-
-#ifndef PACKET_H
-#define PACKET_H
+#ifndef DATATYPES_H
+#define DATATYPES_H
 
 #include <string.h>
 #include <stdio.h>
@@ -27,7 +25,6 @@ typedef struct
 {
     uint16_t type;          // Tipo do pacote (p.ex. DISCOVERY | MONTIORING | EXIT)
     uint16_t seqn;          // Número de sequência do pacote
-    uint16_t timestamp;     // Timestamp do dado
     string sender_ip;       // IP do sender
     string sender_hostname; // Hostname do sender
     string sender_mac;      // MAC do sender
@@ -36,4 +33,21 @@ typedef struct
 packet *decode_packet(string buffer);
 string encode_packet(packet *p);
 
-#endif // PACKET_H
+enum status
+{
+    awake = 0,
+    asleep = 1
+};
+
+string status_to_string(status s);
+
+typedef struct participant_info
+{
+    string hostname;
+    string ip;
+    string mac;
+    status state;
+    int rounds_without_activity;
+} participant_info;
+
+#endif // DATATYPES_H

@@ -16,8 +16,7 @@
 #include <thread>
 #include <netdb.h> // to use hostent
 
-#include "packet.h"
-#include "participant.h"
+#include "datatypes.h"
 
 #define MANAGER_PORT 4000
 #define PARTICIPANT_PORT 4001
@@ -31,7 +30,7 @@ using namespace std;
 class Machine
 {
 public:
-    Machine(bool is_manager = false);
+    Machine();
 
     void Start();
 
@@ -39,7 +38,6 @@ protected:
     string ip;
     string mac;
     string hostname;
-    bool is_manager;
     atomic<uint16_t> seqn;
     atomic<bool> running;
     bool debug_mode;
@@ -52,14 +50,11 @@ protected:
     string exec(const char *cmd);
 
     void message_receiver(int from_port);
+
     virtual void process_message(packet *rcvd_packet);
     virtual void interface();
 
     int sendPacket(packet_type type, string to_ip, int to_port, bool broadcast);
-
-private: // participant functions
-    string manager_ip;
-    void send_exit();
 };
 
 #endif // MACHINE_H

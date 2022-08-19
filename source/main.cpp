@@ -5,6 +5,7 @@
 
 #include "machine.h"
 #include "manager.h"
+#include "participant.h"
 
 using namespace std;
 
@@ -25,7 +26,7 @@ int main(int argc, char *argv[])
     else
     {
         cout << ("Starting as workstation\n") << endl;
-        Machine *m = new Machine();
-        m->Start();
+        Participant *p = new Participant();
+        p->Start();
     }
 }

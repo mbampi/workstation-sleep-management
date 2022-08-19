@@ -7,10 +7,22 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "participant.h"
-#include "packet.h"
+#include "datatypes.h"
 
 using namespace std;
+
+string status_to_string(status s)
+{
+    switch (s)
+    {
+    case awake:
+        return "awake";
+    case asleep:
+        return "asleep";
+    default:
+        return "unknown";
+    }
+}
 
 // encode packet to string
 string encode_packet(packet *p)
@@ -18,7 +30,6 @@ string encode_packet(packet *p)
     string packet_str = "";
     packet_str += to_string(p->type);
     packet_str += "|" + to_string(p->seqn);
-    packet_str += "|" + to_string(p->timestamp);
     packet_str += "|" + p->sender_ip;
     packet_str += "|" + p->sender_hostname;
     packet_str += "|" + p->sender_mac;
@@ -33,8 +44,6 @@ packet *decode_packet(string buffer)
     p->type = (packet_type)atoi(token);
     token = strtok(NULL, "|");
     p->seqn = atoi(token);
-    token = strtok(NULL, "|");
-    p->timestamp = atoi(token);
     token = strtok(NULL, "|");
     p->sender_ip = token;
     token = strtok(NULL, "|");

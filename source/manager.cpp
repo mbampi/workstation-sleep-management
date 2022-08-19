@@ -1,11 +1,6 @@
 
 #include "manager.h"
 
-Manager::Manager()
-{
-    Machine(true);
-}
-
 void Manager::Start()
 {
     thread message_receiver_thread([this]
@@ -101,7 +96,7 @@ void Manager::process_message(packet *rcvd_packet)
         if (debug_mode)
             cout << "process_message: Received DISCOVERY_RES" << endl;
 
-        participant *p = new participant();
+        participant_info *p = new participant_info();
         p->ip = rcvd_packet->sender_ip;
         p->mac = rcvd_packet->sender_mac;
         p->hostname = rcvd_packet->sender_hostname;
@@ -147,7 +142,7 @@ void Manager::printParticipants()
          << left << setw(10)
          << "Status"
          << endl;
-    for (const participant p : getParticipants())
+    for (const participant_info p : getParticipants())
     {
         cout
             << left << setw(25)
@@ -162,7 +157,7 @@ void Manager::printParticipants()
     }
 }
 
-void Manager::addParticipant(participant *p)
+void Manager::addParticipant(participant_info *p)
 {
     if (debug_mode)
         cout << "\naddParticipant: adding participant " << p->hostname << endl;
@@ -180,9 +175,9 @@ void Manager::removeParticipant(string hostname)
     printParticipants();
 }
 
-vector<participant> Manager::getParticipants()
+vector<participant_info> Manager::getParticipants()
 {
-    vector<participant> participants;
+    vector<participant_info> participants;
     participants_map_mutex.lock();
     for (auto const &p : participants_map)
     {
