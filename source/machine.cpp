@@ -172,7 +172,7 @@ int Machine::sendPacket(packet_type type, string to_ip, int to_port, bool broadc
     }
     else // direct message
     {
-        dst.sin_addr.s_addr = inet_addr(ip.c_str());
+        dst.sin_addr.s_addr = inet_addr(to_ip.c_str());
     }
 
     packet *p = new_packet(type);
