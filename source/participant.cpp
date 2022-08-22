@@ -38,22 +38,20 @@ void Participant::interface()
 
 void Participant::process_message(packet *rcvd_packet)
 {
+    this->manager_ip = rcvd_packet->sender_ip;
     switch (rcvd_packet->type)
     {
     case DISCOVERY_REQ:
     {
-        this->manager_ip = ip;
-
         if (debug_mode)
             cout << "process_message: received DISCOVERY_REQ packet." << endl;
-
         int sent_bytes = sendPacket(DISCOVERY_RES, this->manager_ip, MANAGER_PORT, false);
         if (sent_bytes < 0)
             cout << "Error: sendPacket failed." << endl;
 
         if (debug_mode)
             cout << "process_message: sent DISCOVERY_RES with " << sent_bytes << " bytes"
-                 << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+                 << " to ip:port=" << manager_ip << ":" << MANAGER_PORT << endl;
         break;
     }
     case MONITORING_REQ:
@@ -82,6 +80,6 @@ void Participant::process_message(packet *rcvd_packet)
 void Participant::send_exit()
 {
     if (debug_mode)
-        cout << "send_exit: sending EXIT packet to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+        cout << "send_exit: sending EXIT packet to ip:port=" << manager_ip << ":" << MANAGER_PORT << endl;
     sendPacket(EXIT_REQ, this->manager_ip, MANAGER_PORT, false);
 }

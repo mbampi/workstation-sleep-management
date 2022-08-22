@@ -166,9 +166,15 @@ int Machine::sendPacket(packet_type type, string to_ip, int to_port, bool broadc
 
     if (broadcast)
     {
+        string ip = get_ip();
+        int pos = ip.find_last_of('.');
+        ip = ip.substr(0, pos);
+        ip = ip.append(".63");
+
         if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &true_int, sizeof(true_int)) < 0)
             printf("ERROR on setsockopt broadcast");
-        dst.sin_addr.s_addr = htonl(INADDR_ANY);
+        // dst.sin_addr.s_addr = htonl(INADDR_ANY);
+        dst.sin_addr.s_addr = inet_addr(ip.c_str());
     }
     else // direct message
     {
