@@ -6,6 +6,7 @@ void Participant::Start()
     thread message_receiver_thread([this]
                                    { message_receiver(PARTICIPANT_PORT); });
     this->interface();
+    exit(0);
     message_receiver_thread.join();
 }
 
@@ -33,6 +34,7 @@ void Participant::interface()
             cout << "Invalid command." << endl;
         }
     };
+    this->running = false;
     this->send_exit();
 }
 

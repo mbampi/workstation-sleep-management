@@ -16,6 +16,7 @@
 #include <thread>
 #include <netdb.h>  // to use hostent
 #include <unistd.h> // close
+#include <csignal>
 
 #include "datatypes.h"
 #include "machine.h"
@@ -39,7 +40,7 @@ void Machine::process_message(packet *rcvd_packet)
 
 void Machine::Start()
 {
-    cout << "start: should run manager or participant." << endl;
+    cout << "start:" << endl;
 }
 
 void Machine::interface()
@@ -106,7 +107,7 @@ string Machine::get_broadcast_ip()
     int pos = ip.find_last_of('.');
     ip = ip.substr(0, pos);
     ip = ip.append(".63");
-    return ip
+    return ip;
 }
 
 string Machine::exec(const char *cmd)

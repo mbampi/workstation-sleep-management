@@ -11,7 +11,7 @@ void Manager::Start()
                              { this->monitoring(); });
 
     this->interface();
-
+    exit(0);
     discovery_thread.join();
     message_receiver_thread.join();
     monitoring_thread.join();
@@ -49,7 +49,8 @@ void Manager::interface()
         {
             cout << "Invalid command." << endl;
         }
-    };
+    }
+    this->running = false;
 }
 
 void Manager::monitoring()
