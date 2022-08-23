@@ -100,6 +100,14 @@ string Machine::get_ip()
 
     return ip;
 }
+string Machine::get_broadcast_ip()
+{
+    string ip = get_ip();
+    int pos = ip.find_last_of('.');
+    ip = ip.substr(0, pos);
+    ip = ip.append(".63");
+    return ip
+}
 
 string Machine::exec(const char *cmd)
 {
@@ -166,10 +174,7 @@ int Machine::sendPacket(packet_type type, string to_ip, int to_port, bool broadc
 
     if (broadcast)
     {
-        string ip = get_ip();
-        int pos = ip.find_last_of('.');
-        ip = ip.substr(0, pos);
-        ip = ip.append(".63");
+        string ip = get_broadcast_ip();
 
         if (setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, &true_int, sizeof(true_int)) < 0)
             printf("ERROR on setsockopt broadcast");

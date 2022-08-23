@@ -49,6 +49,7 @@ protected:
     string get_mac();
     string get_hostname();
     string get_ip();
+    string get_broadcast_ip();
     string exec(const char *cmd);
 
     void message_receiver(int from_port);
