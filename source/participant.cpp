@@ -40,6 +40,8 @@ void Participant::interface()
 
 void Participant::process_message(packet *rcvd_packet)
 {
+    if (this->manager_ip == "")
+        cout << "MANAGER hostname=" << rcvd_packet->sender_hostname << " | ip=" << rcvd_packet->sender_ip << " | mac=" << rcvd_packet->sender_mac << endl;
     this->manager_ip = rcvd_packet->sender_ip;
     switch (rcvd_packet->type)
     {
