@@ -20,8 +20,8 @@
 
 #include "datatypes.h"
 
-#define MANAGER_PORT 4000
-#define PARTICIPANT_PORT 4001
+#define MANAGER_PORT 7000
+#define PARTICIPANT_PORT 7001
 
 #define MONITORING_INTERVAL 5
 #define DISCOVERY_INTERVAL 10

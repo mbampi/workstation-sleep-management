@@ -148,13 +148,13 @@ void Machine::message_receiver(int from_port)
         char buf[buffer_len];
         unsigned slen = sizeof(sockaddr);
         if (debug_mode)
-            cout << "receiveBroadcast: listening for broadcast on port " << from_port << endl;
+            cout << "message_receiver: listening on port " << from_port << endl;
 
         memset(buf, 0, buffer_len);
         int nrecv = recvfrom(sock_fd, buf, sizeof(buf), 0, (sockaddr *)&si_other, &slen);
 
         if (debug_mode)
-            cout << "receiveBroadcast: rcvd packet " << buf << " with len=" << nrecv << endl;
+            cout << "message_receiver: rcvd packet " << buf << " with len=" << nrecv << endl;
 
         packet *rcvd_packet = decode_packet(buf);
 
