@@ -144,11 +144,13 @@ void Machine::message_receiver(int from_port)
     {
         if (debug_mode)
             cout << endl;
-        char buf[10000];
+        int buffer_len = 10000;
+        char buf[buffer_len];
         unsigned slen = sizeof(sockaddr);
         if (debug_mode)
             cout << "receiveBroadcast: listening for broadcast on port " << from_port << endl;
 
+        memset(buf, 0, buffer_len);
         int nrecv = recvfrom(sock_fd, buf, sizeof(buf), 0, (sockaddr *)&si_other, &slen);
 
         if (debug_mode)
