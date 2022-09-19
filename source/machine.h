@@ -47,44 +47,44 @@ protected:
 
     bool is_manager;
 
-    packet *new_packet(packet_type type);
+    packet *newPacket(packet_type type);
 
-    string get_mac();
-    string get_hostname();
-    string get_ip();
-    string get_broadcast_ip();
+    string getMac();
+    string getHostname();
+    string getIP();
+    string getBroadcastIP();
     string exec(const char *cmd);
 
-    void message_receiver(int from_port);
+    void messageReceiver(int from_port);
 
-    void process_message(packet *rcvd_packet);
+    void processMessage(packet *rcvd_packet);
     void interface();
 
     int sendPacket(packet_type type, string to_ip, int to_port, bool broadcast);
 
     // participant
     string manager_ip; // participant_attribute
-    void participant_start();
-    void participant_send_exit();
-    void process_message_as_participant(packet *rcvd_packet);
-    void participant_interface();
-    void send_exit();
+    void participantStart();
+    void participantSendExit();
+    void processMessageAsParticipant(packet *rcvd_packet);
+    void participantInterface();
+    void sendExit();
 
     // manager
-    map<string, participant_info> participants_map; // hostname -> participant
-    mutex participants_map_mutex;
+    map<string, participant_info> participantsMap; // hostname -> participant
+    mutex participantsMapMutex;
 
-    void manager_start();
-    void process_message_as_manager(packet *rcvd_packet);
-    void manager_interface();
+    void managerStart();
+    void processMessageAsManager(packet *rcvd_packet);
+    void managerInterface();
 
     void printParticipants();
     void addParticipant(participant_info *p);
     void removeParticipant(string hostname);
     void changeParticipantStatus(string hostname, status s);
     vector<participant_info> getParticipants();
-    void zero_rounds_without_activity(string hostname);
-    void inc_rounds_without_activity(string hostname);
+    void zeroRoundsWithoutActivity(string hostname);
+    void incRoundsWithoutActivity(string hostname);
 
     void discovery();
     void monitoring();
