@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <thread>
 #include <netdb.h> // to use hostent
+#include <map>
 
 #include "datatypes.h"
 
@@ -32,7 +33,7 @@ using namespace std;
 class Machine
 {
 public:
-    Machine();
+    Machine(bool is_manager);
 
     void Start();
 
@@ -44,6 +45,8 @@ protected:
     atomic<bool> running;
     bool debug_mode;
 
+    bool is_manager;
+
     packet *new_packet(packet_type type);
 
     string get_mac();
@@ -54,10 +57,40 @@ protected:
 
     void message_receiver(int from_port);
 
-    virtual void process_message(packet *rcvd_packet);
-    virtual void interface();
+    void process_message(packet *rcvd_packet);
+    void interface();
 
     int sendPacket(packet_type type, string to_ip, int to_port, bool broadcast);
+
+    // participant
+    string manager_ip; // participant_attribute
+    void participant_start();
+    void participant_send_exit();
+    void process_message_as_participant(packet *rcvd_packet);
+    void participant_interface();
+    void send_exit();
+
+    // manager
+    map<string, participant_info> participants_map; // hostname -> participant
+    mutex participants_map_mutex;
+
+    void manager_start();
+    void process_message_as_manager(packet *rcvd_packet);
+    void manager_interface();
+
+    void printParticipants();
+    void addParticipant(participant_info *p);
+    void removeParticipant(string hostname);
+    void changeParticipantStatus(string hostname, status s);
+    vector<participant_info> getParticipants();
+    void zero_rounds_without_activity(string hostname);
+    void inc_rounds_without_activity(string hostname);
+
+    void discovery();
+    void monitoring();
+
+    void sendWakeOnLan(string mac);
+    void wakeupParticipant(string hostname);
 };
 
 #endif // MACHINE_H

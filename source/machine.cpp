@@ -1,8 +1,6 @@
 
 
 #include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <iostream>
 #include <array>
 #include <cassert>
@@ -15,15 +13,19 @@
 #include <stdlib.h>
 #include <thread>
 #include <netdb.h>  // to use hostent
-#include <unistd.h> // close
+#include <unistd.h> // close, sleep
 #include <csignal>
+
+#include <iomanip> // to use setw
+#include <vector>
+#include <mutex>
 
 #include "datatypes.h"
 #include "machine.h"
 
 using namespace std;
 
-Machine::Machine()
+Machine::Machine(bool is_manager)
 {
     this->debug_mode = true;
     this->seqn = 0;
@@ -31,21 +33,46 @@ Machine::Machine()
     this->ip = get_ip();
     this->mac = get_mac();
     this->running = true;
-}
-
-void Machine::process_message(packet *rcvd_packet)
-{
-    cout << "process_message: should run manager or participant." << endl;
+    this->manager_ip = "";
+    this->is_manager = is_manager;
 }
 
 void Machine::Start()
 {
     cout << "start:" << endl;
+    if (this->is_manager)
+    {
+        manager_start();
+    }
+    else
+    {
+        participant_start();
+    }
 }
 
-void Machine::interface()
+void Machine::participant_start()
 {
-    cout << "interface: should run manager or participant." << endl;
+    thread message_receiver_thread([this]
+                                   { message_receiver(PARTICIPANT_PORT); });
+    this->interface();
+    exit(0);
+    message_receiver_thread.join();
+}
+
+void Machine::manager_start()
+{
+    thread message_receiver_thread([this]
+                                   { this->message_receiver(MANAGER_PORT); });
+    thread discovery_thread([this]
+                            { this->discovery(); });
+    thread monitoring_thread([this]
+                             { this->monitoring(); });
+
+    this->interface();
+    exit(0);
+    discovery_thread.join();
+    message_receiver_thread.join();
+    monitoring_thread.join();
 }
 
 packet *Machine::new_packet(packet_type type)
@@ -104,9 +131,9 @@ string Machine::get_ip()
 string Machine::get_broadcast_ip()
 {
     string ip = get_ip();
-    int pos = ip.find_last_of('.');
-    ip = ip.substr(0, pos);
-    ip = ip.append(".63");
+    // int pos = ip.find_last_of('.');
+    // ip = ip.substr(0, pos);
+    // ip = ip.append(".63");
     return ip;
 }
 
@@ -197,4 +224,327 @@ int Machine::sendPacket(packet_type type, string to_ip, int to_port, bool broadc
     int sent_bytes = sendto(sockfd, encoded_packet.c_str(), len, 0, (const struct sockaddr *)&dst, sizeof(dst));
     ::close(sockfd);
     return sent_bytes;
+}
+
+void Machine::process_message(packet *rcvd_packet)
+{
+    if (this->is_manager)
+    {
+        process_message_as_manager(rcvd_packet);
+    }
+    else
+    {
+        process_message_as_participant(rcvd_packet);
+    }
+}
+
+void Machine::process_message_as_participant(packet *rcvd_packet)
+{
+    if (this->manager_ip == "")
+        cout << "MANAGER hostname=" << rcvd_packet->sender_hostname << " | ip=" << rcvd_packet->sender_ip << " | mac=" << rcvd_packet->sender_mac << endl;
+    this->manager_ip = rcvd_packet->sender_ip;
+    switch (rcvd_packet->type)
+    {
+    case DISCOVERY_REQ:
+    {
+        if (debug_mode)
+            cout << "process_message: received DISCOVERY_REQ packet." << endl;
+        int sent_bytes = sendPacket(DISCOVERY_RES, this->manager_ip, MANAGER_PORT, false);
+        if (sent_bytes < 0)
+            cout << "Error: sendPacket failed." << endl;
+
+        if (debug_mode)
+            cout << "process_message: sent DISCOVERY_RES with " << sent_bytes << " bytes"
+                 << " to ip:port=" << manager_ip << ":" << MANAGER_PORT << endl;
+        break;
+    }
+    case MONITORING_REQ:
+    {
+        if (debug_mode)
+            cout << "process_message: received MONITORING_REQ packet." << endl;
+
+        int sent_bytes = sendPacket(MONITORING_RES, this->manager_ip, MANAGER_PORT, false);
+        if (sent_bytes < 0)
+            printf("ERROR sendto");
+
+        if (debug_mode)
+            cout << "process_message: sent MONITORING_RES with " << sent_bytes << " bytes"
+                 << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
+        break;
+    }
+    default:
+    {
+        if (debug_mode)
+            cout << "process_message: Received UNKNOWN packet" << endl;
+        break;
+    }
+    }
+}
+
+void Machine::process_message_as_manager(packet *rcvd_packet)
+{
+    if (debug_mode)
+        cout << "manager: process_message: received packet" << endl;
+    switch (rcvd_packet->type)
+    {
+    case DISCOVERY_RES:
+    {
+        if (debug_mode)
+            cout << "process_message: Received DISCOVERY_RES" << endl;
+
+        participant_info *p = new participant_info();
+        p->ip = rcvd_packet->sender_ip;
+        p->mac = rcvd_packet->sender_mac;
+        p->hostname = rcvd_packet->sender_hostname;
+        p->state = awake;
+        p->rounds_without_activity = 0;
+        this->addParticipant(p);
+
+        break;
+    }
+    case MONITORING_RES:
+    {
+        if (debug_mode)
+            cout << "process_message: Received MONITORING_RES" << endl;
+        zero_rounds_without_activity(rcvd_packet->sender_hostname);
+        changeParticipantStatus(rcvd_packet->sender_hostname, awake);
+        break;
+    }
+    case EXIT_REQ:
+    {
+        if (debug_mode)
+            cout << "process_message: Received EXIT_REQ" << endl;
+        removeParticipant(rcvd_packet->sender_hostname);
+        break;
+    }
+    default:
+    {
+        if (debug_mode)
+            cout << "process_message: Received UNKNOWN packet" << endl;
+        break;
+    }
+    }
+}
+
+void Machine::interface()
+{
+    if (this->is_manager)
+    {
+        manager_interface();
+    }
+    else
+    {
+        participant_interface();
+    }
+}
+
+void Machine::participant_interface()
+{
+    string input;
+    while (getline(cin, input))
+    {
+        string cmd = input.substr(0, input.find(" "));
+        transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+
+        if (cmd == "EXIT")
+        {
+            cout << "Exiting..." << endl;
+            this->running = false;
+            break;
+        }
+        else if (cmd == "DEBUG")
+        {
+            this->debug_mode = !this->debug_mode;
+            cout << "Debug mode: " << (this->debug_mode ? "on" : "off") << endl;
+        }
+        else
+        {
+            cout << "Invalid command." << endl;
+        }
+    };
+    this->running = false;
+    this->send_exit();
+}
+
+void Machine::manager_interface()
+{
+    string input;
+    while (getline(cin, input))
+    {
+        string cmd = input.substr(0, input.find(" "));
+        transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+
+        if (cmd == "EXIT")
+        {
+            cout << "Exiting..." << endl;
+            this->running = false;
+            break;
+        }
+        else if (cmd == "DEBUG")
+        {
+            this->debug_mode = !this->debug_mode;
+            cout << "Debug mode: " << (this->debug_mode ? "on" : "off") << endl;
+        }
+        else if (cmd == "PRINT")
+        {
+            this->printParticipants();
+        }
+        else if (cmd == "WAKEUP")
+        {
+            string hostname = input.substr(input.find(" ") + 1);
+            this->wakeupParticipant(hostname);
+        }
+        else
+        {
+            cout << "Invalid command." << endl;
+        }
+    }
+    this->running = false;
+}
+
+void Machine::send_exit()
+{
+    if (this->is_manager)
+    {
+    }
+    else
+    {
+        participant_send_exit();
+    }
+}
+
+void Machine::participant_send_exit()
+{
+    if (debug_mode)
+        cout << "send_exit: sending EXIT packet to ip:port=" << manager_ip << ":" << MANAGER_PORT << endl;
+    sendPacket(EXIT_REQ, this->manager_ip, MANAGER_PORT, false);
+}
+
+void Machine::monitoring()
+{
+    do
+    {
+        if (debug_mode)
+            cout << "manager: monitoring: sending req" << endl;
+
+        for (auto &p : this->getParticipants())
+        {
+            if (p.rounds_without_activity >= ROUNDS_WITHOUT_ACTIVITY_THRESHOLD)
+                this->changeParticipantStatus(p.hostname, asleep);
+            this->inc_rounds_without_activity(p.hostname);
+            int sent_bytes = this->sendPacket(MONITORING_REQ, p.ip, PARTICIPANT_PORT, false);
+            if (debug_mode)
+                cout << "manager: monitoring: sent_bytes=" << sent_bytes << endl;
+        }
+
+        sleep(MONITORING_INTERVAL);
+    } while (this->running);
+}
+
+void Machine::discovery()
+{
+    do
+    {
+        if (debug_mode)
+            cout << "manager: discovery: sending req" << endl;
+        this->sendPacket(DISCOVERY_REQ, "", PARTICIPANT_PORT, true);
+
+        sleep(DISCOVERY_INTERVAL);
+    } while (this->running);
+}
+
+void Machine::printParticipants()
+{
+    cout << setw(15) << "\nPARTICIPANTS" << endl;
+    cout << left << setw(25)
+         << "Hostname"
+         << left << setw(25)
+         << "IP"
+         << left << setw(25)
+         << "MAC"
+         << left << setw(10)
+         << "Status"
+         << endl;
+    for (const participant_info p : getParticipants())
+    {
+        cout
+            << left << setw(25)
+            << p.hostname
+            << left << setw(25)
+            << p.ip
+            << left << setw(25)
+            << p.mac
+            << left << setw(10)
+            << status_to_string(p.state)
+            << endl;
+    }
+}
+
+void Machine::addParticipant(participant_info *p)
+{
+    if (debug_mode)
+        cout << "\naddParticipant: adding participant " << p->hostname << endl;
+    participants_map_mutex.lock();
+    participants_map[p->hostname] = *p;
+    participants_map_mutex.unlock();
+    printParticipants();
+}
+
+void Machine::removeParticipant(string hostname)
+{
+    participants_map_mutex.lock();
+    participants_map.erase(hostname);
+    participants_map_mutex.unlock();
+    printParticipants();
+}
+
+vector<participant_info> Machine::getParticipants()
+{
+    vector<participant_info> participants;
+    participants_map_mutex.lock();
+    for (auto const &p : participants_map)
+    {
+        participants.push_back(p.second);
+    }
+    this->participants_map_mutex.unlock();
+    return participants;
+}
+
+void Machine::changeParticipantStatus(string hostname, status s)
+{
+    participants_map_mutex.lock();
+    participants_map[hostname].state = s;
+    participants_map_mutex.unlock();
+    printParticipants();
+}
+
+void Machine::inc_rounds_without_activity(string hostname)
+{
+    participants_map_mutex.lock();
+    participants_map[hostname].rounds_without_activity++;
+    participants_map_mutex.unlock();
+}
+
+void Machine::zero_rounds_without_activity(string hostname)
+{
+    participants_map_mutex.lock();
+    participants_map[hostname].rounds_without_activity = 0;
+    participants_map_mutex.unlock();
+}
+
+void Machine::wakeupParticipant(string hostname)
+{
+    if (debug_mode)
+        cout << "wakeupParticipant: waking up " << hostname << endl;
+    auto p = this->participants_map[hostname];
+    this->sendWakeOnLan(p.mac);
+}
+
+void Machine::sendWakeOnLan(string mac)
+{
+    cout << "sendWakeOnLan: sending wake on lan to mac=" << mac << endl;
+    string cmd = "wakeonlan " + mac;
+    string res = this->exec(cmd.c_str());
+    if (this->debug_mode)
+        cout << "sendWakeOnLan: retured " << res << endl;
 }
