@@ -30,8 +30,8 @@ typedef struct
     string sender_mac;      // MAC do sender
 } packet;
 
-packet *decode_packet(string buffer);
-string encode_packet(packet *p);
+packet *decodePacket(string buffer);
+string encodePacket(packet *p);
 
 enum status
 {

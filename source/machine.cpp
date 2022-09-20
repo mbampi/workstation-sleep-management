@@ -183,7 +183,7 @@ void Machine::messageReceiver(int from_port)
         if (debug_mode)
             cout << "messageReceiver: rcvd packet " << buf << " with len=" << nrecv << endl;
 
-        packet *rcvd_packet = decode_packet(buf);
+        packet *rcvd_packet = decodePacket(buf);
 
         if (this->running)
             this->processMessage(rcvd_packet);
@@ -217,7 +217,7 @@ int Machine::sendPacket(packet_type type, string to_ip, int to_port, bool broadc
     }
 
     packet *p = newPacket(type);
-    string encoded_packet = encode_packet(p);
+    string encoded_packet = encodePacket(p);
     delete p;
 
     int len = strlen(encoded_packet.c_str());

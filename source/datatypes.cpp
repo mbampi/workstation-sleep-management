@@ -25,7 +25,7 @@ string status_to_string(status s)
 }
 
 // encode packet to string
-string encode_packet(packet *p)
+string encodePacket(packet *p)
 {
     string packet_str = "";
     packet_str += to_string(p->type);
@@ -37,7 +37,7 @@ string encode_packet(packet *p)
 }
 
 // decode packet from string
-packet *decode_packet(string buffer)
+packet *decodePacket(string buffer)
 {
     packet *p = new packet();
     char *token = strtok((char *)buffer.c_str(), "|");
