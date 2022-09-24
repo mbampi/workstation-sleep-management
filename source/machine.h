@@ -55,7 +55,7 @@ protected:
     string getBroadcastIP();
     string exec(const char *cmd);
 
-    void messageReceiver(int from_port);
+    void messageReceiver();
 
     void processMessage(packet *rcvd_packet);
     void interface();

@@ -40,29 +40,8 @@ Machine::Machine(bool is_manager)
 void Machine::Start()
 {
     cout << "start:" << endl;
-    if (this->is_manager)
-    {
-        managerStart();
-    }
-    else
-    {
-        participantStart();
-    }
-}
-
-void Machine::participantStart()
-{
     thread messageReceiver_thread([this]
-                                  { messageReceiver(PARTICIPANT_PORT); });
-    this->interface();
-    exit(0);
-    messageReceiver_thread.join();
-}
-
-void Machine::managerStart()
-{
-    thread messageReceiver_thread([this]
-                                  { this->messageReceiver(MANAGER_PORT); });
+                                  { this->messageReceiver(); });
     thread discovery_thread([this]
                             { this->discovery(); });
     thread monitoring_thread([this]
@@ -154,8 +133,14 @@ string Machine::exec(const char *cmd)
     return result;
 }
 
-void Machine::messageReceiver(int from_port)
+void Machine::messageReceiver()
 {
+    int from_port = PARTICIPANT_PORT;
+    if (this->is_manager)
+    {
+        from_port = MANAGER_PORT;
+    }
+
     sockaddr_in si_me, si_other;
     int sock_fd;
     assert((sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1);
@@ -424,17 +409,20 @@ void Machine::monitoring()
 {
     do
     {
-        if (debug_mode)
-            cout << "manager: monitoring: sending req" << endl;
-
-        for (auto &p : this->getParticipants())
+        if (this->is_manager)
         {
-            if (p.rounds_without_activity >= ROUNDS_WITHOUT_ACTIVITY_THRESHOLD)
-                this->changeParticipantStatus(p.hostname, asleep);
-            this->incRoundsWithoutActivity(p.hostname);
-            int sent_bytes = this->sendPacket(MONITORING_REQ, p.ip, PARTICIPANT_PORT, false);
             if (debug_mode)
-                cout << "manager: monitoring: sent_bytes=" << sent_bytes << endl;
+                cout << "manager: monitoring: sending req" << endl;
+
+            for (auto &p : this->getParticipants())
+            {
+                if (p.rounds_without_activity >= ROUNDS_WITHOUT_ACTIVITY_THRESHOLD)
+                    this->changeParticipantStatus(p.hostname, asleep);
+                this->incRoundsWithoutActivity(p.hostname);
+                int sent_bytes = this->sendPacket(MONITORING_REQ, p.ip, PARTICIPANT_PORT, false);
+                if (debug_mode)
+                    cout << "manager: monitoring: sent_bytes=" << sent_bytes << endl;
+            }
         }
 
         sleep(MONITORING_INTERVAL);
@@ -445,10 +433,12 @@ void Machine::discovery()
 {
     do
     {
-        if (debug_mode)
-            cout << "manager: discovery: sending req" << endl;
-        this->sendPacket(DISCOVERY_REQ, "", PARTICIPANT_PORT, true);
-
+        if (this->is_manager)
+        {
+            if (debug_mode)
+                cout << "manager: discovery: sending req" << endl;
+            this->sendPacket(DISCOVERY_REQ, "", PARTICIPANT_PORT, true);
+        }
         sleep(DISCOVERY_INTERVAL);
     } while (this->running);
 }
