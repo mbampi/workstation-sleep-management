@@ -62,7 +62,43 @@ packet *Machine::newPacket(packet_type type)
     p->sender_ip = this->ip;
     p->sender_hostname = this->hostname;
     p->sender_mac = this->mac;
+    if (this->is_manager && type == REPLICATION)
+        p->data = this->encodeParticipants();
+    else
+        p->data = "";
     return p;
+}
+
+string Machine::encodeParticipants()
+{
+    string participants_str = "";
+    for (auto &p : this->getParticipants())
+    {
+        participants_str += p.hostname + " " + p.ip + " " + p.mac + " " + to_string(p.state) + "!";
+    }
+    return participants_str;
+}
+
+vector<participant_info> Machine::decodeParticipants(string participants_str)
+{
+    vector<participant_info> participants;
+    string delimiter = "!";
+    size_t pos = 0;
+    string token;
+    while ((pos = participants_str.find(delimiter)) != string::npos)
+    {
+        token = participants_str.substr(0, pos);
+        participant_info p;
+        vector<string> part_info = split(token, ' ');
+        p.hostname = part_info[0];
+        p.ip = part_info[1];
+        p.mac = part_info[2];
+        p.state = status(stoi(part_info[3]));
+        p.rounds_without_activity = 0;
+        participants.push_back(p);
+        participants_str.erase(0, pos + delimiter.length());
+    }
+    return participants;
 }
 
 string Machine::getMac()
@@ -175,6 +211,22 @@ void Machine::messageReceiver()
     }
 }
 
+void Machine::sendParticipantsReplicaToAll()
+{
+    if (this->is_manager)
+    {
+        if (debug_mode)
+            cout << "manager: sendParticipantsReplicaToAll" << endl;
+
+        for (auto &p : this->getParticipants())
+        {
+            int sent_bytes = this->sendPacket(REPLICATION, p.ip, PARTICIPANT_PORT, false);
+            if (debug_mode)
+                cout << "manager: sendParticipantsReplicaToAll: ip=" << p.ip << " sent_bytes=" << sent_bytes << endl;
+        }
+    }
+}
+
 int Machine::sendPacket(packet_type type, string to_ip, int to_port, bool broadcast)
 {
     int true_int = 1;
@@ -257,6 +309,14 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
                  << " to ip:port=" << ip << ":" << MANAGER_PORT << endl;
         break;
     }
+    case REPLICATION:
+    {
+        if (debug_mode)
+            cout << "processMessage: received REPLICATION packet." << endl;
+        vector<participant_info> participants = decodeParticipants(rcvd_packet->data);
+        this->setParticipantsMap(participants);
+        break;
+    }
     default:
     {
         if (debug_mode)
@@ -264,6 +324,18 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
         break;
     }
     }
+}
+
+void Machine::setParticipantsMap(vector<participant_info> new_participants)
+{
+    this->participantsMapMutex.lock();
+    this->participantsMap.clear();
+    for (auto p : new_participants)
+    {
+        this->participantsMap[p.hostname] = p;
+    }
+    this->participantsMapMutex.unlock();
+    printParticipants();
 }
 
 void Machine::processMessageAsManager(packet *rcvd_packet)
@@ -474,10 +546,21 @@ void Machine::addParticipant(participant_info *p)
 {
     if (debug_mode)
         cout << "\naddParticipant: adding participant " << p->hostname << endl;
+    // check if participant already exists
+    for (auto &participant : this->getParticipants())
+    {
+        if (participant.hostname == p->hostname)
+        {
+            if (debug_mode)
+                cout << "addParticipant: participant already exists" << endl;
+            return;
+        }
+    }
     participantsMapMutex.lock();
     participantsMap[p->hostname] = *p;
     participantsMapMutex.unlock();
     printParticipants();
+    sendParticipantsReplicaToAll();
 }
 
 void Machine::removeParticipant(string hostname)
@@ -486,6 +569,7 @@ void Machine::removeParticipant(string hostname)
     participantsMap.erase(hostname);
     participantsMapMutex.unlock();
     printParticipants();
+    sendParticipantsReplicaToAll();
 }
 
 vector<participant_info> Machine::getParticipants()
@@ -502,10 +586,15 @@ vector<participant_info> Machine::getParticipants()
 
 void Machine::changeParticipantStatus(string hostname, status s)
 {
+    status oldStatus = participantsMap[hostname].state;
+    if (oldStatus == s)
+        return;
+
     participantsMapMutex.lock();
     participantsMap[hostname].state = s;
     participantsMapMutex.unlock();
     printParticipants();
+    sendParticipantsReplicaToAll();
 }
 
 void Machine::incRoundsWithoutActivity(string hostname)

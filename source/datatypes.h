@@ -3,6 +3,8 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <vector>
+#include <sstream>
 #include <netinet/in.h>
 
 using namespace std;
@@ -18,7 +20,9 @@ enum packet_type
     MONITORING_REQ = 4,
     MONITORING_RES = 5,
 
-    EXIT_REQ = 6,
+    REPLICATION = 6,
+
+    EXIT_REQ = 7,
 };
 
 typedef struct
@@ -28,6 +32,7 @@ typedef struct
     string sender_ip;       // IP do sender
     string sender_hostname; // Hostname do sender
     string sender_mac;      // MAC do sender
+    string data;            // Conteúdo do pacote
 } packet;
 
 packet *decodePacket(string buffer);
@@ -49,5 +54,7 @@ typedef struct participant_info
     status state;
     int rounds_without_activity;
 } participant_info;
+
+vector<string> split(string str, char delimiter);
 
 #endif // DATATYPES_H

@@ -64,7 +64,6 @@ protected:
 
     // participant
     string manager_ip; // participant_attribute
-    void participantStart();
     void participantSendExit();
     void processMessageAsParticipant(packet *rcvd_packet);
     void participantInterface();
@@ -74,17 +73,21 @@ protected:
     map<string, participant_info> participantsMap; // hostname -> participant
     mutex participantsMapMutex;
 
-    void managerStart();
     void processMessageAsManager(packet *rcvd_packet);
     void managerInterface();
 
     void printParticipants();
+    void setParticipantsMap(vector<participant_info> new_participants);
     void addParticipant(participant_info *p);
     void removeParticipant(string hostname);
     void changeParticipantStatus(string hostname, status s);
     vector<participant_info> getParticipants();
     void zeroRoundsWithoutActivity(string hostname);
     void incRoundsWithoutActivity(string hostname);
+
+    string encodeParticipants();
+    vector<participant_info> decodeParticipants(string participants_str);
+    void sendParticipantsReplicaToAll();
 
     void discovery();
     void monitoring();

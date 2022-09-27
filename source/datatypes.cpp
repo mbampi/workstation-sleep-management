@@ -33,6 +33,7 @@ string encodePacket(packet *p)
     packet_str += "|" + p->sender_ip;
     packet_str += "|" + p->sender_hostname;
     packet_str += "|" + p->sender_mac;
+    packet_str += "|" + p->data;
     return packet_str;
 }
 
@@ -50,6 +51,26 @@ packet *decodePacket(string buffer)
     p->sender_hostname = token;
     token = strtok(NULL, "|");
     p->sender_mac = token;
+    // decode data
+    if (p->type == REPLICATION)
+    {
+        token = strtok(NULL, "|");
+        p->data = token;
+    }
 
     return p;
+}
+
+vector<string> split(string str, char delimiter)
+{
+    vector<string> internal;
+    stringstream ss(str); // Turn the string into a stream.
+    string tok;
+
+    while (getline(ss, tok, delimiter))
+    {
+        internal.push_back(tok);
+    }
+
+    return internal;
 }
