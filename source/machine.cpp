@@ -346,13 +346,6 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
         this->setParticipantsMap(participants);
         break;
     }
-    case EXIT_REQ:
-    {
-        if (debug_mode)
-            cout << "processMessage: Received manager EXIT_REQ, election starting..." << endl;
-        //começa nova eleição
-        break;
-    }
     default:
     {
         if (debug_mode)
