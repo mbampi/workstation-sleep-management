@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <thread>
+#include <mutex>
 #include <netdb.h> // to use hostent
 #include <map>
 
@@ -24,16 +25,18 @@
 #define MANAGER_PORT 7000
 #define PARTICIPANT_PORT 7001
 
-#define MONITORING_INTERVAL 5
-#define DISCOVERY_INTERVAL 10
+#define MONITORING_INTERVAL 1
+#define DISCOVERY_INTERVAL 2
 #define ROUNDS_WITHOUT_ACTIVITY_THRESHOLD 1
+#define LIMIT_FOR_ELECTION 6
+#define WAIT_LIMIT_FOR_MSG 1
 
 using namespace std;
 
 class Machine
 {
 public:
-    Machine(bool is_manager);
+    Machine();
 
     void Start();
 
@@ -94,6 +97,8 @@ protected:
 
     void sendWakeOnLan(string mac);
     void wakeupParticipant(string hostname);
+
+    void beginElection();
 };
 
 #endif // MACHINE_H

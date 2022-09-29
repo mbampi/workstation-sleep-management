@@ -25,7 +25,9 @@
 
 using namespace std;
 
-Machine::Machine(bool is_manager)
+int msg_not_recieved = 0;
+
+Machine::Machine()
 {
     this->debug_mode = true;
     this->seqn = 0;
@@ -34,7 +36,7 @@ Machine::Machine(bool is_manager)
     this->mac = getMac();
     this->running = true;
     this->manager_ip = "";
-    this->is_manager = is_manager;
+    this->is_manager = false;
 }
 
 void Machine::Start()
@@ -172,10 +174,6 @@ string Machine::exec(const char *cmd)
 void Machine::messageReceiver()
 {
     int from_port = PARTICIPANT_PORT;
-    if (this->is_manager)
-    {
-        from_port = MANAGER_PORT;
-    }
 
     sockaddr_in si_me, si_other;
     int sock_fd;
@@ -188,8 +186,19 @@ void Machine::messageReceiver()
 
     assert((::bind(sock_fd, (sockaddr *)&si_me, sizeof(sockaddr))) != -1);
 
+    struct timeval tv;
+    tv.tv_sec = WAIT_LIMIT_FOR_MSG;
+    tv.tv_usec = 0;
+        
+    setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+
     while (this->running)
     {
+        if (this->is_manager)
+            from_port = MANAGER_PORT;
+        else   
+            from_port = PARTICIPANT_PORT;
+
         if (debug_mode)
             cout << endl;
         int buffer_len = 10000;
@@ -204,10 +213,27 @@ void Machine::messageReceiver()
         if (debug_mode)
             cout << "messageReceiver: rcvd packet " << buf << " with len=" << nrecv << endl;
 
-        packet *rcvd_packet = decodePacket(buf);
 
-        if (this->running)
-            this->processMessage(rcvd_packet);
+        if (nrecv >= 0)
+        {
+            msg_not_recieved = 0;
+            packet *rcvd_packet = decodePacket(buf);
+
+            if (this->running)
+                this->processMessage(rcvd_packet);
+        }
+
+        msg_not_recieved++;
+
+        if(msg_not_recieved >= LIMIT_FOR_ELECTION)
+        {
+            if (debug_mode)
+                cout << "messageReceiver: manager not found, begin new election" << endl;
+
+            beginElection();
+
+            msg_not_recieved = 0;
+        }
     }
 }
 
@@ -277,13 +303,16 @@ void Machine::processMessage(packet *rcvd_packet)
 
 void Machine::processMessageAsParticipant(packet *rcvd_packet)
 {
-    if (this->manager_ip == "")
-        cout << "MANAGER hostname=" << rcvd_packet->sender_hostname << " | ip=" << rcvd_packet->sender_ip << " | mac=" << rcvd_packet->sender_mac << endl;
-    this->manager_ip = rcvd_packet->sender_ip;
     switch (rcvd_packet->type)
     {
     case DISCOVERY_REQ:
     {
+        if (this->manager_ip != rcvd_packet->sender_hostname)
+        {
+            cout << "MANAGER hostname=" << rcvd_packet->sender_hostname << " | ip=" << rcvd_packet->sender_ip << " | mac=" << rcvd_packet->sender_mac << endl;
+            this->manager_ip = rcvd_packet->sender_ip;
+        }
+    
         if (debug_mode)
             cout << "processMessage: received DISCOVERY_REQ packet." << endl;
         int sent_bytes = sendPacket(DISCOVERY_RES, this->manager_ip, MANAGER_PORT, false);
@@ -292,7 +321,7 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
 
         if (debug_mode)
             cout << "processMessage: sent DISCOVERY_RES with " << sent_bytes << " bytes"
-                 << " to ip:port=" << manager_ip << ":" << MANAGER_PORT << endl;
+                 << " to ip:port=" << this->manager_ip << ":" << MANAGER_PORT << endl;
         break;
     }
     case MONITORING_REQ:
@@ -315,6 +344,13 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
             cout << "processMessage: received REPLICATION packet." << endl;
         vector<participant_info> participants = decodeParticipants(rcvd_packet->data);
         this->setParticipantsMap(participants);
+        break;
+    }
+    case EXIT_REQ:
+    {
+        if (debug_mode)
+            cout << "processMessage: Received manager EXIT_REQ, election starting..." << endl;
+        //começa nova eleição
         break;
     }
     default:
@@ -461,20 +497,12 @@ void Machine::managerInterface()
 
 void Machine::sendExit()
 {
-    if (this->is_manager)
+    if (!(this->is_manager))
     {
+        if (debug_mode)
+            cout << "sendExit: sending EXIT packet to ip:port=" << manager_ip << ":" << MANAGER_PORT << endl;
+        sendPacket(EXIT_REQ, this->manager_ip, MANAGER_PORT, false);
     }
-    else
-    {
-        participantSendExit();
-    }
-}
-
-void Machine::participantSendExit()
-{
-    if (debug_mode)
-        cout << "sendExit: sending EXIT packet to ip:port=" << manager_ip << ":" << MANAGER_PORT << endl;
-    sendPacket(EXIT_REQ, this->manager_ip, MANAGER_PORT, false);
 }
 
 void Machine::monitoring()
@@ -488,12 +516,15 @@ void Machine::monitoring()
 
             for (auto &p : this->getParticipants())
             {
-                if (p.rounds_without_activity >= ROUNDS_WITHOUT_ACTIVITY_THRESHOLD)
-                    this->changeParticipantStatus(p.hostname, asleep);
-                this->incRoundsWithoutActivity(p.hostname);
-                int sent_bytes = this->sendPacket(MONITORING_REQ, p.ip, PARTICIPANT_PORT, false);
-                if (debug_mode)
-                    cout << "manager: monitoring: sent_bytes=" << sent_bytes << endl;
+                //if(p.ip != this->manager_ip)
+                //{
+                    if (p.rounds_without_activity >= ROUNDS_WITHOUT_ACTIVITY_THRESHOLD)
+                        this->changeParticipantStatus(p.hostname, asleep);
+                    this->incRoundsWithoutActivity(p.hostname);
+                    int sent_bytes = this->sendPacket(MONITORING_REQ, p.ip, PARTICIPANT_PORT, false);
+                    if (debug_mode)
+                        cout << "manager: monitoring: sent_bytes=" << sent_bytes << endl;
+                //}
             }
         }
 
@@ -503,6 +534,13 @@ void Machine::monitoring()
 
 void Machine::discovery()
 {
+    //participant_info *p = new participant_info();
+    //    p->ip = this->ip;
+    //    p->mac = this->mac;
+    //    p->hostname = this->hostname;
+    //    p->state = awake;
+    //    p->rounds_without_activity = 0;
+    //    this->addParticipant(p);
     do
     {
         if (this->is_manager)
@@ -626,4 +664,15 @@ void Machine::sendWakeOnLan(string mac)
     string res = this->exec(cmd.c_str());
     if (this->debug_mode)
         cout << "sendWakeOnLan: retured " << res << endl;
+}
+
+void Machine::beginElection()
+{
+
+
+    this->is_manager = true;
+    this->manager_ip = this->ip;
+
+    if (this->debug_mode)
+        cout << "election: Congrats! You are the new manager!" << endl;
 }
