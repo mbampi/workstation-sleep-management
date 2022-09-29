@@ -53,6 +53,7 @@ typedef struct participant_info
     string mac;
     status state;
     int rounds_without_activity;
+    bool is_manager;
 } participant_info;
 
 vector<string> split(string str, char delimiter);

@@ -25,8 +25,6 @@
 
 using namespace std;
 
-int msg_not_recieved = 0;
-
 Machine::Machine()
 {
     this->debug_mode = true;
@@ -76,7 +74,8 @@ string Machine::encodeParticipants()
     string participants_str = "";
     for (auto &p : this->getParticipants())
     {
-        participants_str += p.hostname + " " + p.ip + " " + p.mac + " " + to_string(p.state) + "!";
+        string is_manager_str = p.is_manager ? "1" : "0";
+        participants_str += p.hostname + " " + p.ip + " " + p.mac + " " + to_string(p.state) + " " + is_manager_str + "!";
     }
     return participants_str;
 }
@@ -96,6 +95,7 @@ vector<participant_info> Machine::decodeParticipants(string participants_str)
         p.ip = part_info[1];
         p.mac = part_info[2];
         p.state = status(stoi(part_info[3]));
+        p.is_manager = bool(stoi(part_info[4]));
         p.rounds_without_activity = 0;
         participants.push_back(p);
         participants_str.erase(0, pos + delimiter.length());
@@ -171,48 +171,65 @@ string Machine::exec(const char *cmd)
     return result;
 }
 
-void Machine::messageReceiver()
+int Machine::newReceiverSocket()
 {
     int from_port = PARTICIPANT_PORT;
+    if (this->is_manager)
+        from_port = MANAGER_PORT;
 
-    sockaddr_in si_me, si_other;
+    if (this->debug_mode)
+        cout << "newReceiverSocket: " << from_port << endl;
+
+    sockaddr_in si_me;
     int sock_fd;
     assert((sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1);
-
     memset(&si_me, 0, sizeof(si_me));
     si_me.sin_family = AF_INET;
     si_me.sin_port = htons(from_port);
     si_me.sin_addr.s_addr = INADDR_ANY;
-
     assert((::bind(sock_fd, (sockaddr *)&si_me, sizeof(sockaddr))) != -1);
 
+    // set timeout
     struct timeval tv;
     tv.tv_sec = WAIT_LIMIT_FOR_MSG;
     tv.tv_usec = 0;
-        
-    setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+    setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
+
+    return sock_fd;
+}
+
+void Machine::messageReceiver()
+{
+    int current_is_manager = -1;
+    int msg_not_recieved = 0;
+    int sock_fd = 0;
 
     while (this->running)
     {
-        if (this->is_manager)
-            from_port = MANAGER_PORT;
-        else   
-            from_port = PARTICIPANT_PORT;
+        if (this->is_manager != current_is_manager)
+        {
+            if (sock_fd != 0)
+                close(sock_fd);
+            current_is_manager = this->is_manager;
+            sock_fd = this->newReceiverSocket();
+        }
 
-        if (debug_mode)
-            cout << endl;
         int buffer_len = 10000;
         char buf[buffer_len];
         unsigned slen = sizeof(sockaddr);
         if (debug_mode)
-            cout << "messageReceiver: listening on port " << from_port << endl;
+        {
+            int port = this->is_manager ? MANAGER_PORT : PARTICIPANT_PORT;
+            cout << endl
+                 << "messageReceiver: listening on port " << port << endl;
+        }
 
+        sockaddr_in si_other;
         memset(buf, 0, buffer_len);
         int nrecv = recvfrom(sock_fd, buf, sizeof(buf), 0, (sockaddr *)&si_other, &slen);
 
         if (debug_mode)
             cout << "messageReceiver: rcvd packet " << buf << " with len=" << nrecv << endl;
-
 
         if (nrecv >= 0)
         {
@@ -224,14 +241,13 @@ void Machine::messageReceiver()
         }
 
         msg_not_recieved++;
-
-        if(msg_not_recieved >= LIMIT_FOR_ELECTION)
+        if (msg_not_recieved >= LIMIT_FOR_ELECTION)
         {
-            if (debug_mode)
+            if (!this->is_manager)
+            {
                 cout << "messageReceiver: manager not found, begin new election" << endl;
-
-            beginElection();
-
+                beginElection();
+            }
             msg_not_recieved = 0;
         }
     }
@@ -309,10 +325,10 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
     {
         if (this->manager_ip != rcvd_packet->sender_hostname)
         {
-            cout << "MANAGER hostname=" << rcvd_packet->sender_hostname << " | ip=" << rcvd_packet->sender_ip << " | mac=" << rcvd_packet->sender_mac << endl;
+            cout << "processMessage: MANAGER hostname=" << rcvd_packet->sender_hostname << " | ip=" << rcvd_packet->sender_ip << " | mac=" << rcvd_packet->sender_mac << endl;
             this->manager_ip = rcvd_packet->sender_ip;
         }
-    
+
         if (debug_mode)
             cout << "processMessage: received DISCOVERY_REQ packet." << endl;
         int sent_bytes = sendPacket(DISCOVERY_RES, this->manager_ip, MANAGER_PORT, false);
@@ -331,7 +347,7 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
 
         int sent_bytes = sendPacket(MONITORING_RES, this->manager_ip, MANAGER_PORT, false);
         if (sent_bytes < 0)
-            printf("ERROR sendto");
+            printf("processMessage: ERROR sendto");
 
         if (debug_mode)
             cout << "processMessage: sent MONITORING_RES with " << sent_bytes << " bytes"
@@ -383,6 +399,7 @@ void Machine::processMessageAsManager(packet *rcvd_packet)
         p->mac = rcvd_packet->sender_mac;
         p->hostname = rcvd_packet->sender_hostname;
         p->state = awake;
+        p->is_manager = false;
         p->rounds_without_activity = 0;
         this->addParticipant(p);
 
@@ -414,46 +431,6 @@ void Machine::processMessageAsManager(packet *rcvd_packet)
 
 void Machine::interface()
 {
-    if (this->is_manager)
-    {
-        managerInterface();
-    }
-    else
-    {
-        participantInterface();
-    }
-}
-
-void Machine::participantInterface()
-{
-    string input;
-    while (getline(cin, input))
-    {
-        string cmd = input.substr(0, input.find(" "));
-        transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
-
-        if (cmd == "EXIT")
-        {
-            cout << "Exiting..." << endl;
-            this->running = false;
-            break;
-        }
-        else if (cmd == "DEBUG")
-        {
-            this->debug_mode = !this->debug_mode;
-            cout << "Debug mode: " << (this->debug_mode ? "on" : "off") << endl;
-        }
-        else
-        {
-            cout << "Invalid command." << endl;
-        }
-    };
-    this->running = false;
-    this->sendExit();
-}
-
-void Machine::managerInterface()
-{
     string input;
     while (getline(cin, input))
     {
@@ -475,7 +452,7 @@ void Machine::managerInterface()
         {
             this->printParticipants();
         }
-        else if (cmd == "WAKEUP")
+        else if ((cmd == "WAKEUP") && (this->is_manager))
         {
             string hostname = input.substr(input.find(" ") + 1);
             this->wakeupParticipant(hostname);
@@ -484,8 +461,11 @@ void Machine::managerInterface()
         {
             cout << "Invalid command." << endl;
         }
-    }
+    };
     this->running = false;
+
+    if (!this->is_manager)
+        this->sendExit();
 }
 
 void Machine::sendExit()
@@ -509,15 +489,15 @@ void Machine::monitoring()
 
             for (auto &p : this->getParticipants())
             {
-                //if(p.ip != this->manager_ip)
-                //{
+                if (p.hostname != this->hostname)
+                {
                     if (p.rounds_without_activity >= ROUNDS_WITHOUT_ACTIVITY_THRESHOLD)
                         this->changeParticipantStatus(p.hostname, asleep);
                     this->incRoundsWithoutActivity(p.hostname);
                     int sent_bytes = this->sendPacket(MONITORING_REQ, p.ip, PARTICIPANT_PORT, false);
                     if (debug_mode)
                         cout << "manager: monitoring: sent_bytes=" << sent_bytes << endl;
-                //}
+                }
             }
         }
 
@@ -527,13 +507,6 @@ void Machine::monitoring()
 
 void Machine::discovery()
 {
-    //participant_info *p = new participant_info();
-    //    p->ip = this->ip;
-    //    p->mac = this->mac;
-    //    p->hostname = this->hostname;
-    //    p->state = awake;
-    //    p->rounds_without_activity = 0;
-    //    this->addParticipant(p);
     do
     {
         if (this->is_manager)
@@ -557,6 +530,8 @@ void Machine::printParticipants()
          << "MAC"
          << left << setw(10)
          << "Status"
+         << left << setw(10)
+         << "Manager"
          << endl;
     for (const participant_info p : getParticipants())
     {
@@ -569,6 +544,8 @@ void Machine::printParticipants()
             << p.mac
             << left << setw(10)
             << status_to_string(p.state)
+            << left << setw(10)
+            << (p.is_manager ? "Yes" : "No")
             << endl;
     }
 }
@@ -659,13 +636,30 @@ void Machine::sendWakeOnLan(string mac)
         cout << "sendWakeOnLan: retured " << res << endl;
 }
 
-void Machine::beginElection()
+void Machine::setSelfAsManager()
 {
-
-
     this->is_manager = true;
     this->manager_ip = this->ip;
 
+    participant_info *p = new participant_info();
+    p->hostname = this->hostname;
+    p->ip = this->ip;
+    p->mac = this->mac;
+    p->state = awake;
+    p->rounds_without_activity = 0;
+    p->is_manager = true;
+
+    participantsMapMutex.lock();
+    participantsMap[p->hostname] = *p;
+    participantsMapMutex.unlock();
+    printParticipants();
+    sendParticipantsReplicaToAll();
+}
+
+void Machine::beginElection()
+{
+    this->setSelfAsManager();
+
     if (this->debug_mode)
-        cout << "election: Congrats! You are the new manager!" << endl;
+        cout << "election: I am the new manager!" << endl;
 }

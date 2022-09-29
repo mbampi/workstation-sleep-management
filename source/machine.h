@@ -25,11 +25,12 @@
 #define MANAGER_PORT 7000
 #define PARTICIPANT_PORT 7001
 
-#define MONITORING_INTERVAL 1
-#define DISCOVERY_INTERVAL 2
+#define MONITORING_INTERVAL 3
+#define DISCOVERY_INTERVAL 5
+
 #define ROUNDS_WITHOUT_ACTIVITY_THRESHOLD 1
-#define LIMIT_FOR_ELECTION 6
-#define WAIT_LIMIT_FOR_MSG 1
+#define LIMIT_FOR_ELECTION 3
+#define WAIT_LIMIT_FOR_MSG 3
 
 using namespace std;
 
@@ -58,10 +59,12 @@ protected:
     string getBroadcastIP();
     string exec(const char *cmd);
 
+    int newReceiverSocket();
     void messageReceiver();
 
     void processMessage(packet *rcvd_packet);
     void interface();
+    void setSelfAsManager();
 
     int sendPacket(packet_type type, string to_ip, int to_port, bool broadcast);
 
@@ -69,7 +72,6 @@ protected:
     string manager_ip; // participant_attribute
     void participantSendExit();
     void processMessageAsParticipant(packet *rcvd_packet);
-    void participantInterface();
     void sendExit();
 
     // manager
@@ -77,7 +79,6 @@ protected:
     mutex participantsMapMutex;
 
     void processMessageAsManager(packet *rcvd_packet);
-    void managerInterface();
 
     void printParticipants();
     void setParticipantsMap(vector<participant_info> new_participants);
