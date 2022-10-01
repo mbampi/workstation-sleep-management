@@ -19,6 +19,7 @@
 #include <mutex>
 #include <netdb.h> // to use hostent
 #include <map>
+#include <unistd.h>
 
 #include "datatypes.h"
 
@@ -50,6 +51,12 @@ protected:
     bool debug_mode;
 
     bool is_manager;
+    bool election_running;
+
+    int next_id = 0;
+    bool in_election = false;
+    int election_iter = 0;
+    int nro_participants = 0;
 
     packet *newPacket(packet_type type);
 
@@ -99,7 +106,7 @@ protected:
     void sendWakeOnLan(string mac);
     void wakeupParticipant(string hostname);
 
-    void beginElection();
+    void election();
 };
 
 #endif // MACHINE_H

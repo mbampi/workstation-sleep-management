@@ -22,7 +22,11 @@ enum packet_type
 
     REPLICATION = 6,
 
-    EXIT_REQ = 7,
+    ELECTION_REQ = 7,
+    ELECTION_RES = 8,
+    ELECTION_END = 9,
+
+    EXIT_REQ = 10,
 };
 
 typedef struct
@@ -54,6 +58,7 @@ typedef struct participant_info
     status state;
     int rounds_without_activity;
     bool is_manager;
+    int id;
 } participant_info;
 
 vector<string> split(string str, char delimiter);
