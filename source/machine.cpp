@@ -35,6 +35,11 @@ Machine::Machine()
     this->running = true;
     this->manager_ip = "";
     this->is_manager = false;
+
+    this->next_id = 0;
+    this->in_election = false;
+    this->election_iter = 0;
+    this->nro_participants = 0;
 }
 
 void Machine::Start()
@@ -245,6 +250,8 @@ void Machine::messageReceiver()
             this->election_iter++;
         else
             msg_not_received++;
+	
+cout << msg_not_received << " " <<  election_iter << " " << this->in_election << endl;
 
         if (msg_not_received >= LIMIT_FOR_ELECTION && !this->in_election && !this->is_manager)
         {
@@ -392,6 +399,7 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
                 cout << "processMessage: sent MONITORING_RES with " << sent_bytes << " bytes"
                     << " to ip:port=" << rcvd_packet->sender_ip << ":" << PARTICIPANT_PORT << endl;
         }
+	break;
     }
     case ELECTION_RES:
     {
@@ -399,6 +407,7 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
             cout << "processMessage: received ELECTION_RES packet." << endl;
 
         this->in_election = false;
+	break;
     }
     case ELECTION_END:
     {
@@ -414,6 +423,7 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
             cout << "processMessage: MANAGER hostname=" << rcvd_packet->sender_hostname << " | ip=" << rcvd_packet->sender_ip << " | mac=" << rcvd_packet->sender_mac << endl;
             this->manager_ip = rcvd_packet->sender_ip;
         }
+	break;
     }
     default:
     {
@@ -817,13 +827,16 @@ void Machine::election()
     }
     else
     {
-        // Se não existem outros participantes 
-        // zera as variáveis de eleição, se seta como manager
-        this->in_election = false;
-        this->election_iter = 0;
-        this->setSelfAsManager();
+	if (this->in_election)
+	{
+            // Se não existem outros participantes 
+            // zera as variáveis de eleição, se seta como manager
+            this->in_election = false;
+            this->election_iter = 0;
+            this->setSelfAsManager();
 
-        if (this->debug_mode)
-            cout << "election: I am the new manager!" << endl;
+            if (this->debug_mode)
+                cout << "election: I am the new manager!" << endl;
+	}
     }   
 }

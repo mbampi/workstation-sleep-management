@@ -30,7 +30,7 @@
 #define DISCOVERY_INTERVAL 5
 
 #define ROUNDS_WITHOUT_ACTIVITY_THRESHOLD 1
-#define LIMIT_FOR_ELECTION 3
+#define LIMIT_FOR_ELECTION 6
 #define WAIT_LIMIT_FOR_MSG 3
 
 using namespace std;
@@ -53,10 +53,10 @@ protected:
     bool is_manager;
     bool election_running;
 
-    int next_id = 0;
-    bool in_election = false;
-    int election_iter = 0;
-    int nro_participants = 0;
+    int next_id;
+    bool in_election;
+    int election_iter;
+    int nro_participants;
 
     packet *newPacket(packet_type type);
 
