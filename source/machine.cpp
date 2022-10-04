@@ -157,6 +157,7 @@ string Machine::getBroadcastIP()
      int pos = ip.find_last_of('.');
      ip = ip.substr(0, pos);
      ip = ip.append(".63");
+     //ip = ip.append(".255");
     return ip;
 }
 
@@ -212,7 +213,6 @@ void Machine::messageReceiver()
 
     while (this->running)
     {
-cout << "TESTE 1 = " << current_is_manager << endl;
         if (this->is_manager != current_is_manager)
         { 
             if (sock_fd != 0)
@@ -220,7 +220,6 @@ cout << "TESTE 1 = " << current_is_manager << endl;
             current_is_manager = this->is_manager;
             sock_fd = this->newReceiverSocket();
         }
-cout << "TESTE 2 = " << current_is_manager << endl;
 
         int buffer_len = 10000;
         char buf[buffer_len];
@@ -389,7 +388,6 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
         if (debug_mode)
             cout << "processMessage: received ELECTION_REQ packet." << endl;
        
-	election_iter++;
         int this_id, sender_id = -1;
         for (auto &p : this->getParticipants())
         {
@@ -417,6 +415,7 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
 	else
 	{
 	    this->in_election = false;
+	    election_iter++;
 	    cout << "THIS MACHINE LEFT THE ELECTION = " << this->in_election << endl;
 	} 
 	break;
