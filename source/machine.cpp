@@ -752,17 +752,12 @@ void Machine::setSelfAsManager()
     p->id = this->next_id;
     this->next_id++;
 
-    participantsMapMutex.lock();
-
     if (participantsMap[p->hostname].hostname == this->hostname)
     {
 cout << "ELEIÇÃO 7" << endl;
         p->id = participantsMap[p->hostname].id;
-cout << "ELEIÇÃO 7.1" << endl;
         this->next_id = 0;
-cout << "ELEIÇÃO 7.2" << endl;
         for (auto &part : this->getParticipants()){
-cout << "ELEIÇÃO 7.5" << endl;
             this->next_id = max(part.id, this->next_id);}
 
 cout << "ELEIÇÃO 8" << endl;
@@ -773,8 +768,8 @@ cout << "ELEIÇÃO 8" << endl;
 cout << "ELEIÇÃO 9" << endl;
 	this->nro_participants ++;
     }
+    participantsMapMutex.lock();
     participantsMap[p->hostname] = *p;
-    
     participantsMapMutex.unlock();
 
 cout << "ELEIÇÃO 10" << endl;
