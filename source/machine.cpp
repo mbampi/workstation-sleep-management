@@ -154,9 +154,9 @@ string Machine::getIP()
 string Machine::getBroadcastIP()
 {
     string ip = getIP();
-    // int pos = ip.find_last_of('.');
-    // ip = ip.substr(0, pos);
-    // ip = ip.append(".63");
+     int pos = ip.find_last_of('.');
+     ip = ip.substr(0, pos);
+     ip = ip.append(".63");
     return ip;
 }
 
@@ -368,6 +368,18 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
             cout << "processMessage: received REPLICATION packet." << endl;
         vector<participant_info> participants = decodeParticipants(rcvd_packet->data);
         this->setParticipantsMap(participants);
+
+	this->nro_participants == 0;
+	this->next_id = 0;
+
+	for (auto &p : this->getParticipants())
+        {
+            this->nro_participants ++;     
+	    this->next_id = max(p.id, this->next_id);
+        }
+	
+	this->next_id ++;
+
         break;
     }
     case ELECTION_REQ:
@@ -394,7 +406,7 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
                 printf("processMessage: ERROR sendto");
 
             if (debug_mode)
-                cout << "processMessage: sent MONITORING_RES with " << sent_bytes << " bytes"
+                cout << "processMessage: sent ELECTION_RES with " << sent_bytes << " bytes"
                     << " to ip:port=" << rcvd_packet->sender_ip << ":" << PARTICIPANT_PORT << endl;
         }
 	break;
@@ -464,6 +476,8 @@ void Machine::processMessageAsManager(packet *rcvd_packet)
         p->is_manager = false;
         p->rounds_without_activity = 0;
         this->addParticipant(p);
+
+	cout << "NEXT ID = " << this->next_id << endl;
 
         break;
     }
@@ -632,10 +646,11 @@ void Machine::addParticipant(participant_info *p)
     participantsMapMutex.lock();
     participantsMap[p->hostname] = *p;
     participantsMapMutex.unlock();
-    printParticipants();
-    sendParticipantsReplicaToAll();
 
     this->nro_participants++;
+    this->next_id++;
+    printParticipants();
+    sendParticipantsReplicaToAll();
 }
 
 void Machine::removeParticipant(string hostname)
@@ -643,10 +658,11 @@ void Machine::removeParticipant(string hostname)
     participantsMapMutex.lock();
     participantsMap.erase(hostname);
     participantsMapMutex.unlock();
+
+    this->nro_participants--;
     printParticipants();
     sendParticipantsReplicaToAll();
 
-    this->nro_participants--;
 }
 
 vector<participant_info> Machine::getParticipants()
@@ -743,6 +759,8 @@ void Machine::setSelfAsManager()
     
     participantsMapMutex.unlock();
 
+    this->nro_participants ++;
+
     printParticipants();
     sendParticipantsReplicaToAll();
     
@@ -754,19 +772,25 @@ void Machine::election()
 {
     int T = 3*this->nro_participants;
 
+cout << "TESTE 0  " <<  this->nro_participants << endl;
 
     if(this->nro_participants > 1)
     {
+cout << "TESTE 1" << endl;
         if (this->in_election)
         {
+cout << "TESTE 2" << endl;
             if (this->election_iter == 0)
             {
+cout << "TESTE 3" << endl;
                 // Se existem outros participantes, este ainda está concorrendo e NÃO HOUVE iterações de eleição ainda
                 // Manda eleição para lista de participantes
                 for (auto &p : this->getParticipants())
                 {
+cout << "TESTE 4" << endl;
                     if (p.hostname != this->hostname)
                     {
+cout << "TESTE 5" << endl;
                         int sent_bytes = this->sendPacket(ELECTION_REQ, p.ip, PARTICIPANT_PORT, false);
                         if (debug_mode)
                             cout << "election: Begin: sent_bytes=" << sent_bytes << endl;
@@ -775,25 +799,29 @@ void Machine::election()
             }
             else if (this->election_iter > 0 && this->election_iter < T)
             {
+cout << "TESTE 6" << endl;
                 // Se existem outros participantes, este ainda está concorrendo e HOUVE iterações de eleição, mas ainda NÃO ACABOU
                 // Espera resposta
 
             }
             else if (this->election_iter >= T)
             {
+cout << "TESTE 7" << endl;
                 // Se existem outros participantes, este ainda está concorrendo, HOUVE iterações de eleição e ACABOU
                 // Avisa todos os participantes que acabou e este é o novo manager, zera as variáveis de eleição, se seta como manager
 
                 for (auto &p : this->getParticipants())
                 {
+cout << "TESTE 8" << endl;
                     if (p.hostname != this->hostname)
                     {
+cout << "TESTE 9" << endl;
                         int sent_bytes = this->sendPacket(ELECTION_END, p.ip, PARTICIPANT_PORT, false);
                         if (debug_mode)
                             cout << "election: End: sent_bytes=" << sent_bytes << endl;                      
                     }   
                 }
-
+cout << "TESTE 10" << endl;
                 this->in_election = false;
                 this->election_iter = 0;
                 this->setSelfAsManager();
@@ -804,14 +832,17 @@ void Machine::election()
         }
         else
         {
+cout << "TESTE 11" << endl;
             if (this->election_iter > 0 && this->election_iter < T)
             {
+cout << "TESTE 12" << endl;
                 // Se existem outros participantes, este NÃO está concorrendo e ainda HÁ iterações de eleição, mas ainda NÃO ACABOU
                 // Espera resposta do novo manager e incrementa iterações de eleição
                 this->election_iter++;
             }
             else if (this->election_iter >= T)
             {
+cout << "TESTE 13" << endl;
                 // Se existem outros participantes, este NÃO está concorrendo, HOUVE iterações de eleição e ACABOU o tempo
                 // Reseta variáveis para começar uma nova eleição
                 this->in_election = true;
@@ -824,9 +855,10 @@ void Machine::election()
     }
     else
     {
+cout << "TESTE 14" << endl;
 	if (this->in_election)
 	{
-
+cout << "TESTE 15" << endl;
             // Se não existem outros participantes 
             // zera as variáveis de eleição, se seta como manager
             this->in_election = false;
