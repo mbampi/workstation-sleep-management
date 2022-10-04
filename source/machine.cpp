@@ -206,19 +206,21 @@ int Machine::newReceiverSocket()
 
 void Machine::messageReceiver()
 {
-    int current_is_manager = -1;
+    bool current_is_manager = true;
     int msg_not_received = 0;
     int sock_fd = 0;
 
     while (this->running)
     {
+cout << "TESTE 1 = " << current_is_manager << endl;
         if (this->is_manager != current_is_manager)
-        {
+        { 
             if (sock_fd != 0)
                 close(sock_fd);
             current_is_manager = this->is_manager;
             sock_fd = this->newReceiverSocket();
         }
+cout << "TESTE 2 = " << current_is_manager << endl;
 
         int buffer_len = 10000;
         char buf[buffer_len];
@@ -246,7 +248,7 @@ void Machine::messageReceiver()
                 this->processMessage(rcvd_packet);
         }
 
-        if (this->in_election)
+        if (this->in_election || election_iter > 0)
             this->election_iter++;
         else
             msg_not_received++;
@@ -386,9 +388,9 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
     {
         if (debug_mode)
             cout << "processMessage: received ELECTION_REQ packet." << endl;
-        
-        this->in_election = true;
-        bool this_id, sender_id = NULL;
+       
+	election_iter++;
+        int this_id, sender_id = -1;
         for (auto &p : this->getParticipants())
         {
             if (p.hostname == this->hostname)
@@ -398,9 +400,12 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
                 sender_id = p.id;
         }
 
+	cout << "ELEIÇÂO: this id: " << this_id << " | sender id: " << sender_id << endl;
+
         if (this_id > sender_id)
         {       
             int sent_bytes = sendPacket(ELECTION_RES, rcvd_packet->sender_ip, PARTICIPANT_PORT, false);
+	    this->in_election = true;
 
             if (sent_bytes < 0)
                 printf("processMessage: ERROR sendto");
@@ -409,6 +414,11 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
                 cout << "processMessage: sent ELECTION_RES with " << sent_bytes << " bytes"
                     << " to ip:port=" << rcvd_packet->sender_ip << ":" << PARTICIPANT_PORT << endl;
         }
+	else
+	{
+	    this->in_election = false;
+	    cout << "THIS MACHINE LEFT THE ELECTION = " << this->in_election << endl;
+	} 
 	break;
     }
     case ELECTION_RES:
@@ -417,6 +427,7 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
             cout << "processMessage: received ELECTION_RES packet." << endl;
 
         this->in_election = false;
+cout << "THIS MACHINE LEFT THE ELECTION = " << this->in_election << endl;
 	break;
     }
     case ELECTION_END:
@@ -427,6 +438,7 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
         if (!this->in_election)
         {
             this->election_iter = 0;
+		
             if (debug_mode)
                 cout << "processMessage: election ended." << endl;
             
@@ -484,7 +496,7 @@ void Machine::processMessageAsManager(packet *rcvd_packet)
     case MONITORING_RES:
     {
         if (debug_mode)
-            cout << "processMessage: Received MONITORING_RES" << endl;
+            cout << "processMessage: Received MONITORING_RES in port " << endl;
         zeroRoundsWithoutActivity(rcvd_packet->sender_hostname);
         changeParticipantStatus(rcvd_packet->sender_hostname, awake);
         break;
@@ -726,8 +738,6 @@ void Machine::sendWakeOnLan(string mac)
 
 void Machine::setSelfAsManager()
 {
-    bool is_new_participant = true;
-
     this->is_manager = true;
     this->manager_ip = this->ip;
 
@@ -740,57 +750,57 @@ void Machine::setSelfAsManager()
     p->is_manager = true;
 
     p->id = this->next_id;
+    this->next_id++;
 
     participantsMapMutex.lock();
 
     if (participantsMap[p->hostname].hostname == this->hostname)
     {
-        is_new_participant = false;
+cout << "ELEIÇÃO 7" << endl;
         p->id = participantsMap[p->hostname].id;
-
+cout << "ELEIÇÃO 7.1" << endl;
         this->next_id = 0;
+cout << "ELEIÇÃO 7.2" << endl;
+        for (auto &part : this->getParticipants()){
+cout << "ELEIÇÃO 7.5" << endl;
+            this->next_id = max(part.id, this->next_id);}
 
-        for (auto &p : this->getParticipants())
-            this->next_id = max(p.id, this->next_id);
-
+cout << "ELEIÇÃO 8" << endl;
         this->next_id += 1;
+    }
+    else
+    {
+cout << "ELEIÇÃO 9" << endl;
+	this->nro_participants ++;
     }
     participantsMap[p->hostname] = *p;
     
     participantsMapMutex.unlock();
 
-    this->nro_participants ++;
-
+cout << "ELEIÇÃO 10" << endl;
     printParticipants();
     sendParticipantsReplicaToAll();
-    
-    if(is_new_participant)
-        this->next_id++;
+
+cout << "ELEIÇÃO 11" << endl;
+           
 }
 
 void Machine::election()
 {
     int T = 3*this->nro_participants;
 
-cout << "TESTE 0  " <<  this->nro_participants << endl;
-
     if(this->nro_participants > 1)
     {
-cout << "TESTE 1" << endl;
         if (this->in_election)
         {
-cout << "TESTE 2" << endl;
             if (this->election_iter == 0)
             {
-cout << "TESTE 3" << endl;
                 // Se existem outros participantes, este ainda está concorrendo e NÃO HOUVE iterações de eleição ainda
                 // Manda eleição para lista de participantes
                 for (auto &p : this->getParticipants())
-                {
-cout << "TESTE 4" << endl;
+                     {
                     if (p.hostname != this->hostname)
-                    {
-cout << "TESTE 5" << endl;
+		    {
                         int sent_bytes = this->sendPacket(ELECTION_REQ, p.ip, PARTICIPANT_PORT, false);
                         if (debug_mode)
                             cout << "election: Begin: sent_bytes=" << sent_bytes << endl;
@@ -798,33 +808,30 @@ cout << "TESTE 5" << endl;
                 }
             }
             else if (this->election_iter > 0 && this->election_iter < T)
-            {
-cout << "TESTE 6" << endl;
+            {    
                 // Se existem outros participantes, este ainda está concorrendo e HOUVE iterações de eleição, mas ainda NÃO ACABOU
                 // Espera resposta
 
             }
             else if (this->election_iter >= T)
             {
-cout << "TESTE 7" << endl;
                 // Se existem outros participantes, este ainda está concorrendo, HOUVE iterações de eleição e ACABOU
                 // Avisa todos os participantes que acabou e este é o novo manager, zera as variáveis de eleição, se seta como manager
 
                 for (auto &p : this->getParticipants())
                 {
-cout << "TESTE 8" << endl;
                     if (p.hostname != this->hostname)
                     {
-cout << "TESTE 9" << endl;
                         int sent_bytes = this->sendPacket(ELECTION_END, p.ip, PARTICIPANT_PORT, false);
                         if (debug_mode)
                             cout << "election: End: sent_bytes=" << sent_bytes << endl;                      
                     }   
                 }
-cout << "TESTE 10" << endl;
                 this->in_election = false;
                 this->election_iter = 0;
+cout << "ELEIÇÃO 1" << endl;
                 this->setSelfAsManager();
+cout << "ELEIÇÃO 2" << endl;
 
                 if (this->debug_mode)
                     cout << "election: I am the new manager!" << endl;
@@ -832,21 +839,18 @@ cout << "TESTE 10" << endl;
         }
         else
         {
-cout << "TESTE 11" << endl;
             if (this->election_iter > 0 && this->election_iter < T)
             {
-cout << "TESTE 12" << endl;
                 // Se existem outros participantes, este NÃO está concorrendo e ainda HÁ iterações de eleição, mas ainda NÃO ACABOU
                 // Espera resposta do novo manager e incrementa iterações de eleição
                 this->election_iter++;
             }
             else if (this->election_iter >= T)
             {
-cout << "TESTE 13" << endl;
                 // Se existem outros participantes, este NÃO está concorrendo, HOUVE iterações de eleição e ACABOU o tempo
                 // Reseta variáveis para começar uma nova eleição
                 this->in_election = true;
-                this->election_iter = 0;
+                this->election_iter = -1;
 
                 cout << "election: End: new manager failed, begin new election" << endl;
 
@@ -855,10 +859,8 @@ cout << "TESTE 13" << endl;
     }
     else
     {
-cout << "TESTE 14" << endl;
 	if (this->in_election)
 	{
-cout << "TESTE 15" << endl;
             // Se não existem outros participantes 
             // zera as variáveis de eleição, se seta como manager
             this->in_election = false;
