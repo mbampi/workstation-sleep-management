@@ -250,8 +250,6 @@ void Machine::messageReceiver()
             this->election_iter++;
         else
             msg_not_received++;
-	
-cout << msg_not_received << " " <<  election_iter << " " << this->in_election << endl;
 
         if (msg_not_received >= LIMIT_FOR_ELECTION && !this->in_election && !this->is_manager)
         {
@@ -754,7 +752,6 @@ void Machine::setSelfAsManager()
 
 void Machine::election()
 {
-    this->in_election = true;
     int T = 3*this->nro_participants;
 
 
@@ -829,6 +826,7 @@ void Machine::election()
     {
 	if (this->in_election)
 	{
+
             // Se não existem outros participantes 
             // zera as variáveis de eleição, se seta como manager
             this->in_election = false;
