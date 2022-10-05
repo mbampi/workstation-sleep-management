@@ -358,7 +358,7 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
     {
     case DISCOVERY_REQ:
     {
-        if (this->manager_ip != rcvd_packet->sender_hostname)
+        if (this->manager_ip != rcvd_packet->sender_ip)
         {
             cout << "processMessage: MANAGER hostname=" << rcvd_packet->sender_hostname << " | ip=" << rcvd_packet->sender_ip << " | mac=" << rcvd_packet->sender_mac << endl;
             this->manager_ip = rcvd_packet->sender_ip;
@@ -424,8 +424,6 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
                 sender_id = p.id;
         }
 
-        cout << "ELEIÇÂO: this id: " << this_id << " | sender id: " << sender_id << endl;
-
         if (this_id > sender_id)
         {
             int sent_bytes = sendPacket(ELECTION_RES, rcvd_packet->sender_ip, PARTICIPANT_PORT, false);
@@ -445,7 +443,8 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
             if (election_iter == 0)
                 election_iter = 1;
 
-            cout << "THIS MACHINE LEFT THE ELECTION = " << this->in_election << endl;
+            if (debug_mode)
+                cout << "processMessage: This machine has left the election." << endl;
         }
         break;
     }
@@ -455,7 +454,10 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
             cout << "processMessage: received ELECTION_RES packet." << endl;
 
         this->in_election = false;
-        cout << "THIS MACHINE LEFT THE ELECTION = " << this->in_election << endl;
+        
+        if (debug_mode)
+            cout << "processMessage: This machine has left the election." << endl;
+        
         break;
     }
     case ELECTION_END:
