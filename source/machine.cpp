@@ -52,8 +52,13 @@ void Machine::Start()
     thread monitoring_thread([this]
                              { this->monitoring(); });
 
+    thread statusRecognizer_thread([this]
+                             { this->statusRecognizer(); });
+                            
+
     this->interface();
     exit(0);
+    statusRecognizer_thread.join();
     discovery_thread.join();
     messageReceiver_thread.join();
     monitoring_thread.join();
@@ -247,11 +252,6 @@ void Machine::messageReceiver()
                 this->processMessage(rcvd_packet);
         }
 
-        if (this->in_election || election_iter > 0)
-            this->election_iter++;
-        else
-            msg_not_received++;
-
         if (msg_not_received >= LIMIT_FOR_ELECTION && !this->in_election && !this->is_manager)
         {
             cout << "messageReceiver: manager not found, begin new election" << endl;
@@ -259,6 +259,11 @@ void Machine::messageReceiver()
         }
 
         election();
+
+        if (this->in_election || election_iter > 0)
+            this->election_iter++;
+        else
+            msg_not_received++;
     }
 }
 
@@ -398,12 +403,12 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
                 sender_id = p.id;
         }
 
-	cout << "ELEIÇÂO: this id: " << this_id << " | sender id: " << sender_id << endl;
+	    cout << "ELEICAO: this id: " << this_id << " | sender id: " << sender_id << endl;
 
         if (this_id > sender_id)
         {       
             int sent_bytes = sendPacket(ELECTION_RES, rcvd_packet->sender_ip, PARTICIPANT_PORT, false);
-	    this->in_election = true;
+	        this->in_election = true;
 
             if (sent_bytes < 0)
                 printf("processMessage: ERROR sendto");
@@ -411,14 +416,18 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
             if (debug_mode)
                 cout << "processMessage: sent ELECTION_RES with " << sent_bytes << " bytes"
                     << " to ip:port=" << rcvd_packet->sender_ip << ":" << PARTICIPANT_PORT << endl;
+            
         }
-	else
-	{
-	    this->in_election = false;
-	    election_iter++;
-	    cout << "THIS MACHINE LEFT THE ELECTION = " << this->in_election << endl;
-	} 
-	break;
+	    else
+	    {
+	        this->in_election = false;
+
+            if (election_iter == 0)
+	            election_iter = 1;
+
+	        cout << "THIS MACHINE LEFT THE ELECTION = " << this->in_election << endl;
+	    }
+	    break;
     }
     case ELECTION_RES:
     {
@@ -606,6 +615,82 @@ void Machine::discovery()
     } while (this->running);
 }
 
+void Machine::statusRecognizer()
+{
+    const int TIMEOUT = 3;
+    auto last_activity_time = chrono::system_clock::now();
+
+    while(true)
+    {
+        auto current_time = chrono::system_clock::now();
+
+        chrono::duration<double> elapsed_seconds = current_time - last_activity_time;
+        last_activity_time = current_time;
+
+        if(elapsed_seconds.count() > TIMEOUT)
+        {
+            //woke up from sleep, we assume he is not manager anymore
+            this->is_manager = false;
+        }
+        sleep(1);
+    }
+}
+
+//void Machine::statusRecognizer()
+//{
+//    int from_port = PARTICIPANT_PORT;
+
+//    sockaddr_in si_me;
+//    int sock_fd;
+//    assert((sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1);
+//    memset(&si_me, 0, sizeof(si_me));
+//    si_me.sin_family = AF_INET;
+//    si_me.sin_port = htons(from_port);
+//    si_me.sin_addr.s_addr = INADDR_ANY;
+//    assert((::bind(sock_fd, (sockaddr *)&si_me, sizeof(sockaddr))) != -1);
+
+//    while (this->running)
+//    {
+//        if (this->is_manager)
+//        { 
+
+//            int buffer_len = 10000;
+//            char buf[buffer_len];
+//            unsigned slen = sizeof(sockaddr);
+//            if (debug_mode)
+//            {
+//                cout << endl
+//                    << "statusRecognizer: listening on port " << PARTICIPANT_PORT << endl;
+//            }
+
+//            sockaddr_in si_other;
+//            memset(buf, 0, buffer_len);
+//            int nrecv = recvfrom(sock_fd, buf, sizeof(buf), 0, (sockaddr *)&si_other, &slen);
+
+//            if (debug_mode)
+//                cout << "statusRecognizer: rcvd packet " << buf << " with len=" << nrecv << endl;
+
+//            if (nrecv >= 0)
+//            {
+//                packet *rcvd_packet = decodePacket(buf);
+
+//                if (this->running)
+//                {
+//                    if(rcvd_packet->sender_ip != this->ip)
+//                    {
+//                        this->is_manager = false;
+//                        this->in_election = true;
+//                    }
+//                }
+//            }
+//       }
+
+
+
+
+//    }
+//}
+
 void Machine::printParticipants()
 {
     cout << setw(15) << "\nPARTICIPANTS" << endl;
@@ -753,29 +838,23 @@ void Machine::setSelfAsManager()
 
     if (participantsMap[p->hostname].hostname == this->hostname)
     {
-cout << "ELEIÇÃO 7" << endl;
         p->id = participantsMap[p->hostname].id;
         this->next_id = 0;
         for (auto &part : this->getParticipants()){
             this->next_id = max(part.id, this->next_id);}
 
-cout << "ELEIÇÃO 8" << endl;
         this->next_id += 1;
     }
     else
     {
-cout << "ELEIÇÃO 9" << endl;
 	this->nro_participants ++;
     }
     participantsMapMutex.lock();
     participantsMap[p->hostname] = *p;
     participantsMapMutex.unlock();
 
-cout << "ELEIÇÃO 10" << endl;
     printParticipants();
     sendParticipantsReplicaToAll();
-
-cout << "ELEIÇÃO 11" << endl;
            
 }
 
@@ -801,15 +880,9 @@ void Machine::election()
                     }   
                 }
             }
-            else if (this->election_iter > 0 && this->election_iter < T)
-            {    
-                // Se existem outros participantes, este ainda está concorrendo e HOUVE iterações de eleição, mas ainda NÃO ACABOU
-                // Espera resposta
-
-            }
-            else if (this->election_iter >= T)
+            else if (this->election_iter >= LIMIT_FOR_ELECTION)
             {
-                // Se existem outros participantes, este ainda está concorrendo, HOUVE iterações de eleição e ACABOU
+                // Se existem outros participantes, este ainda está concorrendo, NÃO HOUVE resposta e ACABOU
                 // Avisa todos os participantes que acabou e este é o novo manager, zera as variáveis de eleição, se seta como manager
 
                 for (auto &p : this->getParticipants())
@@ -823,9 +896,8 @@ void Machine::election()
                 }
                 this->in_election = false;
                 this->election_iter = 0;
-cout << "ELEIÇÃO 1" << endl;
+
                 this->setSelfAsManager();
-cout << "ELEIÇÃO 2" << endl;
 
                 if (this->debug_mode)
                     cout << "election: I am the new manager!" << endl;
@@ -833,13 +905,7 @@ cout << "ELEIÇÃO 2" << endl;
         }
         else
         {
-            if (this->election_iter > 0 && this->election_iter < T)
-            {
-                // Se existem outros participantes, este NÃO está concorrendo e ainda HÁ iterações de eleição, mas ainda NÃO ACABOU
-                // Espera resposta do novo manager e incrementa iterações de eleição
-                this->election_iter++;
-            }
-            else if (this->election_iter >= T)
+            if (this->election_iter >= T)
             {
                 // Se existem outros participantes, este NÃO está concorrendo, HOUVE iterações de eleição e ACABOU o tempo
                 // Reseta variáveis para começar uma nova eleição

@@ -102,6 +102,7 @@ protected:
 
     void discovery();
     void monitoring();
+    void statusRecognizer();
 
     void sendWakeOnLan(string mac);
     void wakeupParticipant(string hostname);
