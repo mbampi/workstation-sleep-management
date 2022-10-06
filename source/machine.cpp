@@ -160,8 +160,8 @@ string Machine::getBroadcastIP()
     string ip = getIP();
     int pos = ip.find_last_of('.');
     ip = ip.substr(0, pos);
-    ip = ip.append(".63");
-    // ip = ip.append(".255");
+    // ip = ip.append(".63");
+    ip = ip.append(".255");
     return ip;
 }
 
@@ -454,10 +454,10 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
             cout << "processMessage: received ELECTION_RES packet." << endl;
 
         this->in_election = false;
-        
+
         if (debug_mode)
             cout << "processMessage: This machine has left the election." << endl;
-        
+
         break;
     }
     case ELECTION_END:
@@ -519,7 +519,8 @@ void Machine::processMessageAsManager(packet *rcvd_packet)
         p->rounds_without_activity = 0;
         this->addParticipant(p);
 
-        cout << "NEXT ID = " << this->next_id << endl;
+        if (debug_mode)
+            cout << "processMessageAsManager: NEXT ID = " << this->next_id << endl;
 
         break;
     }
