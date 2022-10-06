@@ -4,7 +4,6 @@ Sleep management distributed system for workstations that belong to the same phy
 
 INF01151 – SISTEMAS OPERACIONAIS II N
 
-
 ## Arquitetura
 
 Threads:
@@ -32,25 +31,26 @@ Ele será protegido por sessão crítica.
 
 ## Como executar
 
-### Participante
 Iniciar:
 ```
-make participant
+make run
 ```
+
+### Comandos
 
 Sair do servico: 
 ```
 EXIT
 ```
 
-### Manager
-Iniciar
+Imprimir a lista de participantes
 ```
-make manager
+PRINT
 ```
 
 Acordar outra maquina: (somente o manager consegue)
 ```
 WAKEUP hostname 
 ```
+
 
