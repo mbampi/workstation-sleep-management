@@ -209,28 +209,6 @@ int Machine::newReceiverSocket()
     return sock_fd;
 }
 
-// check when the computer wakes up from sleep,
-// setting the machine to manager=false if he was
-// the manager before the sleep
-// void Machine::statusRecognizer()
-// {
-//     const int TIMEOUT = 3;
-//     auto last_activity_time = chrono::system_clock::now();
-//     while (true)
-//     {
-//         auto current_time = chrono::system_clock::now();
-//         chrono::duration<double> elapsed_seconds = current_time - last_activity_time;
-//         last_activity_time = current_time;
-
-//         if (elapsed_seconds.count() > TIMEOUT)
-//         {
-//             // woke up from sleep. We assume he is not the manager anymore
-//             this->is_manager = false;
-//         }
-//         sleep(1);
-//     }
-// }
-
 void Machine::messageReceiver()
 {
     bool current_is_manager = true;
@@ -424,7 +402,7 @@ void Machine::processMessageAsParticipant(packet *rcvd_packet)
                 sender_id = p.id;
         }
 
-        if (this_id > sender_id)
+        if ((this_id > sender_id) && (this->nro_participants > 1))
         {
             int sent_bytes = sendPacket(ELECTION_RES, rcvd_packet->sender_ip, PARTICIPANT_PORT, false);
             this->in_election = true;
@@ -640,54 +618,79 @@ void Machine::discovery()
 
 void Machine::statusRecognizer()
 {
-    int from_port = PARTICIPANT_PORT;
-
-    sockaddr_in si_me;
-    int sock_fd;
-    assert((sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1);
-    memset(&si_me, 0, sizeof(si_me));
-    si_me.sin_family = AF_INET;
-    si_me.sin_port = htons(from_port);
-    si_me.sin_addr.s_addr = INADDR_ANY;
-    assert((::bind(sock_fd, (sockaddr *)&si_me, sizeof(sockaddr))) != -1);
-
-    while (this->running)
+    if (this->is_manager)
     {
-        if (this->is_manager)
+        int from_port = PARTICIPANT_PORT;
+
+        sockaddr_in si_me;
+        int sock_fd;
+        assert((sock_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1);
+        memset(&si_me, 0, sizeof(si_me));
+        si_me.sin_family = AF_INET;
+        si_me.sin_port = htons(from_port);
+        si_me.sin_addr.s_addr = INADDR_ANY;
+        assert((::bind(sock_fd, (sockaddr *)&si_me, sizeof(sockaddr))) != -1);
+
+        while (this->running)
         {
-
-            int buffer_len = 10000;
-            char buf[buffer_len];
-            unsigned slen = sizeof(sockaddr);
-            if (debug_mode)
+            if (this->is_manager)
             {
-                cout << endl
-                     << "statusRecognizer: listening on port " << PARTICIPANT_PORT << endl;
-            }
 
-            sockaddr_in si_other;
-            memset(buf, 0, buffer_len);
-            int nrecv = recvfrom(sock_fd, buf, sizeof(buf), 0, (sockaddr *)&si_other, &slen);
-
-            if (debug_mode)
-                cout << "statusRecognizer: rcvd packet " << buf << " with len=" << nrecv << endl;
-
-            if (nrecv >= 0)
-            {
-                packet *rcvd_packet = decodePacket(buf);
-
-                if (this->running)
+                int buffer_len = 10000;
+                char buf[buffer_len];
+                unsigned slen = sizeof(sockaddr);
+                if (debug_mode)
                 {
-                    if (rcvd_packet->sender_ip != this->ip)
+                    cout << endl
+                         << "statusRecognizer: listening on port " << PARTICIPANT_PORT << endl;
+                }
+
+                sockaddr_in si_other;
+                memset(buf, 0, buffer_len);
+                int nrecv = recvfrom(sock_fd, buf, sizeof(buf), 0, (sockaddr *)&si_other, &slen);
+
+                if (debug_mode)
+                    cout << "statusRecognizer: rcvd packet " << buf << " with len=" << nrecv << endl;
+
+                if (nrecv >= 0)
+                {
+                    packet *rcvd_packet = decodePacket(buf);
+
+                    if (this->running)
                     {
-                        this->is_manager = false;
-                        this->in_election = true;
+                        if (rcvd_packet->sender_ip != this->ip)
+                        {
+                            this->is_manager = false;
+                            this->in_election = true;
+                        }
                     }
                 }
             }
         }
     }
 }
+
+// check when the computer wakes up from sleep,
+// setting the machine to manager=false if he was
+// the manager before the sleep
+// void Machine::statusRecognizer()
+// {
+//     const int TIMEOUT = 3;
+//     auto last_activity_time = chrono::system_clock::now();
+//     while (true)
+//     {
+//         auto current_time = chrono::system_clock::now();
+//         chrono::duration<double> elapsed_seconds = current_time - last_activity_time;
+//         last_activity_time = current_time;
+
+//         if (elapsed_seconds.count() > TIMEOUT)
+//         {
+//             // woke up from sleep. We assume he is not the manager anymore
+//             this->is_manager = false;
+//         }
+//         sleep(1);
+//     }
+// }
 
 void Machine::printParticipants()
 {
